@@ -6,7 +6,7 @@ const DEFAULT_VIEW = {
 };
 
 export class MapManager {
-  constructor({ mapElementId }) {
+  constructor({ mapElementId, onSpotSelected = () => {} }) {
     if (!window.L) {
       throw new Error("Leaflet failed to load");
     }
@@ -45,7 +45,15 @@ export class MapManager {
       }
     });
 
-    this.markerLayer = window.L.featureGroup().addTo(this.map);
+    this.onSpotSelected = onSpotSelected;
+    this.markerLayer = typeof window.L.markerClusterGroup === "function"
+      ? window.L.markerClusterGroup({
+          showCoverageOnHover: false,
+          spiderfyOnMaxZoom: true,
+          removeOutsideVisibleBounds: true,
+          maxClusterRadius: 55,
+        }).addTo(this.map)
+      : window.L.featureGroup().addTo(this.map);
 
     window.addEventListener("resize", () => {
       window.requestAnimationFrame(() => this.map.invalidateSize());
@@ -98,7 +106,13 @@ export class MapManager {
     const title = properties.name || "Monitoring spot";
     const description = properties.description || "No description available.";
 
-    return window.L.marker([latitude, longitude]).bindPopup(this.popupTemplate(title, description));
+    const marker = window.L.marker([latitude, longitude], {
+      title,
+      alt: `${title} monitoring spot`,
+    }).bindPopup(this.popupTemplate(title, description));
+
+    marker.on("click", () => this.onSpotSelected(feature));
+    return marker;
   }
 
   popupTemplate(title, description) {

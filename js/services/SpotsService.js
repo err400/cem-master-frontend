@@ -3,8 +3,9 @@ export class SpotsService {
     this.apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
   }
 
-  async listSpots() {
-    const response = await fetch(`${this.apiBaseUrl}/api/v1/spots`, {
+  async listSpots({ speciesId = null } = {}) {
+    const query = speciesId ? `?species_id=${encodeURIComponent(speciesId)}` : "";
+    const response = await fetch(`${this.apiBaseUrl}/api/v1/spots${query}`, {
       method: "GET",
       cache: "no-store",
       headers: {

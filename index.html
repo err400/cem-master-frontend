@@ -12,10 +12,22 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./leaflet/leaflet.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="./styles/style.css" />
     <script src="./js/config.js"></script>
     <script src="./leaflet/leaflet.js" defer></script>
+    <script
+      src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+      defer
+    ></script>
     <script type="module" src="./js/main.js"></script>
   </head>
   <body>
@@ -30,11 +42,66 @@
         </a>
       </header>
 
-      <main class="map-panel" aria-label="Public monitoring spot map">
-        <div id="status" class="status status--loading" role="status" aria-live="polite">
-          Loading public monitoring spots...
+      <main class="workspace">
+        <aside class="dashboard" aria-label="Biodiversity dashboard">
+          <section class="dashboard-section search-section">
+            <p class="section-kicker">Explore the network</p>
+            <h2>Find a bird</h2>
+            <form id="bird-search-form" class="bird-search" role="search">
+              <label class="sr-only" for="bird-search-input">Common or scientific bird name</label>
+              <input
+                id="bird-search-input"
+                name="bird"
+                type="search"
+                list="bird-suggestions"
+                placeholder="e.g. Indian Peafowl"
+                autocomplete="off"
+              />
+              <datalist id="bird-suggestions"></datalist>
+              <button type="submit">Search</button>
+            </form>
+            <button id="show-all-spots" class="secondary-button" type="button">
+              Show all spots
+            </button>
+          </section>
+
+          <section id="species-panel" class="dashboard-section species-panel" hidden>
+            <p class="section-kicker">Selected species</p>
+            <div class="species-heading">
+              <img id="species-image" alt="" hidden />
+              <div>
+                <h2 id="species-common-name"></h2>
+                <p id="species-scientific-name" class="scientific-name"></p>
+                <span id="species-iucn" class="iucn-badge"></span>
+              </div>
+            </div>
+            <dl id="species-network-metrics" class="metric-grid"></dl>
+            <p id="species-image-credit" class="image-credit"></p>
+          </section>
+
+        </aside>
+
+        <div class="content-area">
+          <p id="map-mode" class="map-mode map-mode-banner" aria-live="polite">
+            Showing all monitoring spots
+          </p>
+
+          <section class="map-panel" aria-label="Public monitoring spot map">
+            <div id="status" class="status status--loading" role="status" aria-live="polite">
+              Loading public monitoring spots...
+            </div>
+            <div id="map" class="map" aria-label="Leaflet map of public monitoring spots"></div>
+          </section>
+
+          <section id="details-panel" class="analysis-output is-empty" aria-live="polite">
+            <div id="details-heading" hidden>
+              <p class="section-kicker">Bioacoustic insights</p>
+              <h2 id="details-title"></h2>
+              <p id="details-intro" class="details-intro"></p>
+            </div>
+            <div id="details-content"></div>
+          </section>
         </div>
-        <div id="map" class="map" aria-label="Leaflet map of public monitoring spots"></div>
       </main>
     </div>
   </body>

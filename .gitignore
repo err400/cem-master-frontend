@@ -1,0 +1,26 @@
+# Local environment and editor settings
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+
+# Dependency/build output (if tooling is added later)
+node_modules/
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

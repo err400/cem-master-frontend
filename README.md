@@ -30,7 +30,8 @@ For Render deployment, update `API_BASE_URL` to the deployed backend origin, for
 API_BASE_URL: "https://cem-master-backend.onrender.com"
 ```
 
-The frontend fetches only `${API_BASE_URL}/api/v1/spots`.
+The frontend uses the public spot, species, and dashboard endpoints under
+`${API_BASE_URL}/api/v1`.
 
 ## Render
 
@@ -45,9 +46,16 @@ This is a static site. Suggested Render settings:
 - Header with `CEM Master`
 - `Do Your Own CEM` button linking to `https://cem-cloud.onrender.com/`
 - Leaflet map with OpenStreetMap tiles
-- Markers and popups for backend GeoJSON spot features
+- Clustered markers that separate as the user zooms in
+- Bird search with common/scientific-name suggestions
+- Species metadata and IUCN status panel
+- All-spots and species-filtered map modes
+- Context-sensitive bird-diversity and species-at-location analysis panels
 - Loading, empty, and error states
 
 ## Leaflet Assets
 
 Leaflet JavaScript, CSS, and marker images are stored locally under `leaflet/`. They were copied from the existing CEM compute frontend so this static site can deploy independently without runtime imports from another repository.
+
+Marker clustering currently loads Leaflet.markercluster 1.5.3 from unpkg. The
+base Leaflet library and marker images remain stored locally.
