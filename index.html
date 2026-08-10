@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>CEM Master</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./leaflet/leaflet.css" />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles/style.css" />
+    <script src="./js/config.js"></script>
+    <script src="./leaflet/leaflet.js" defer></script>
+    <script type="module" src="./js/main.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="brand-block">
+          <p class="eyebrow">Continuous Ecological Monitoring</p>
+          <h1>CEM Master</h1>
+        </div>
+        <a class="cem-button" href="https://cem-cloud.onrender.com/" rel="noopener">
+          Do Your Own CEM
+        </a>
+      </header>
+
+      <main class="map-panel" aria-label="Public monitoring spot map">
+        <div id="status" class="status status--loading" role="status" aria-live="polite">
+          Loading public monitoring spots...
+        </div>
+        <div id="map" class="map" aria-label="Leaflet map of public monitoring spots"></div>
+      </main>
+    </div>
+  </body>
+</html>
