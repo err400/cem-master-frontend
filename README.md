@@ -33,14 +33,6 @@ API_BASE_URL: "https://cem-master-backend.onrender.com"
 The frontend uses the public spot, species, and dashboard endpoints under
 `${API_BASE_URL}/api/v1`.
 
-## Render
-
-This is a static site. Suggested Render settings:
-
-- Build command: none
-- Publish directory: `.`
-- Add/update `js/config.js` with the deployed backend URL before deployment.
-
 ## Phase 1 Features
 
 - Header with `CEM Master`
