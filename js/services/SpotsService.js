@@ -3,9 +3,15 @@ export class SpotsService {
     this.apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
   }
 
-  async listSpots({ speciesId = null, startDate = "", endDate = "" } = {}) {
+  async listSpots({
+    speciesId = null,
+    migrationClass = "",
+    startDate = "",
+    endDate = "",
+  } = {}) {
     const query = new URLSearchParams();
     if (speciesId) query.set("species_id", speciesId);
+    if (migrationClass.trim()) query.set("migration_class", migrationClass.trim());
     if (startDate) query.set("start_date", startDate);
     if (endDate) query.set("end_date", endDate);
     const suffix = query.size ? `?${query}` : "";
