@@ -26,9 +26,13 @@ export class DashboardService {
     return this.request(`/api/v1/spots/${encodeURIComponent(spotId)}/summary`);
   }
 
-  getSpotSpeciesSummary(spotId, speciesId) {
+  getSpotSpeciesSummary(spotId, speciesId, { startDate = "", endDate = "" } = {}) {
+    const query = new URLSearchParams();
+    if (startDate) query.set("start_date", startDate);
+    if (endDate) query.set("end_date", endDate);
+    const suffix = query.size ? `?${query}` : "";
     return this.request(
-      `/api/v1/spots/${encodeURIComponent(spotId)}/species/${encodeURIComponent(speciesId)}`,
+      `/api/v1/spots/${encodeURIComponent(spotId)}/species/${encodeURIComponent(speciesId)}${suffix}`,
     );
   }
 }

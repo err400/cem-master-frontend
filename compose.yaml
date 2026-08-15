@@ -1,0 +1,75 @@
+services:
+  backend:
+    build:
+      context: ../cem-master-backend
+      dockerfile: Dockerfile
+    ports:
+      - "${BACKEND_PORT:-8001}:8001"
+    environment:
+      DATABASE_URL: "${BACKEND_DATABASE_URL:-sqlite:////data/cem_master.db}"
+      CORS_ORIGINS: "${BACKEND_CORS_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}"
+      CEM_MASTER_API_KEY: "${BACKEND_API_KEY:-}"
+    volumes:
+      - ../cem-master-backend/app:/app/app:ro
+      - ../cem-master-backend/scripts:/app/scripts:ro
+      - backend_data:/data
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8001"
+      - --reload
+      - --reload-dir
+      - /app/app
+    networks:
+      - cem-network
+    restart: unless-stopped
+
+  seed:
+    build:
+      context: ../cem-master-backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "${BACKEND_DATABASE_URL:-sqlite:////data/cem_master.db}"
+    volumes:
+      - ../cem-master-backend/app:/app/app:ro
+      - ../cem-master-backend/scripts:/app/scripts:ro
+      - backend_data:/data
+    command:
+      - python
+      - scripts/seed_spots.py
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - cem-network
+    restart: "no"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-8000}:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./js:/usr/share/nginx/html/js:ro
+      - ./styles:/usr/share/nginx/html/styles:ro
+      - ./leaflet:/usr/share/nginx/html/leaflet:ro
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    networks:
+      - cem-network
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+    name: cem_master_backend_data
+
+networks:
+  cem-network:
+    name: cem_master_network
+    driver: bridge

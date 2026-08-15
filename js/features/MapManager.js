@@ -46,6 +46,7 @@ export class MapManager {
     });
 
     this.onSpotSelected = onSpotSelected;
+    this.markersBySpotId = new Map();
     this.markerLayer = typeof window.L.markerClusterGroup === "function"
       ? window.L.markerClusterGroup({
           showCoverageOnHover: false,
@@ -72,11 +73,18 @@ export class MapManager {
 
   renderSpots(featureCollection) {
     this.markerLayer.clearLayers();
+    this.markersBySpotId.clear();
+
+    const detectionCounts = featureCollection.features
+      .map((feature) => Number(feature?.properties?.detection_count))
+      .filter((count) => Number.isFinite(count));
+    this.maximumDetectionCount = Math.max(...detectionCounts, 1);
 
     featureCollection.features.forEach((feature) => {
       const marker = this.createMarker(feature);
       if (marker) {
         marker.addTo(this.markerLayer);
+        this.markersBySpotId.set(String(feature.properties?.id), marker);
       }
     });
 
@@ -106,20 +114,58 @@ export class MapManager {
     const title = properties.name || "Monitoring spot";
     const description = properties.description || "No description available.";
 
-    const marker = window.L.marker([latitude, longitude], {
-      title,
-      alt: `${title} monitoring spot`,
-    }).bindPopup(this.popupTemplate(title, description));
+    const detectionCount = Number(properties.detection_count);
+    const hasDetectionCount = Number.isFinite(detectionCount);
+    const intensity = hasDetectionCount ? detectionCount / this.maximumDetectionCount : 0;
+    const marker = hasDetectionCount
+      ? window.L.circleMarker([latitude, longitude], {
+          radius: 8 + (Math.sqrt(intensity) * 12),
+          color: "#fffdf7",
+          weight: 2,
+          fillColor: intensity > 0.66 ? "#173f2b" : intensity > 0.33 ? "#4f7b4c" : "#88a96c",
+          fillOpacity: 0.9,
+        })
+      : window.L.marker([latitude, longitude], {
+          title,
+          alt: `${title} monitoring spot`,
+          icon: window.L.divIcon({
+            className: "cem-marker-icon",
+            html: "<span aria-hidden=\"true\">♪</span>",
+            iconSize: [34, 42],
+            iconAnchor: [17, 40],
+            popupAnchor: [0, -36],
+          }),
+        });
+
+    marker.bindPopup(this.popupTemplate(title, description, properties));
 
     marker.on("click", () => this.onSpotSelected(feature));
     return marker;
   }
 
-  popupTemplate(title, description) {
+  focusFeature(feature) {
+    const marker = this.markersBySpotId.get(String(feature?.properties?.id));
+    if (!marker) return;
+    const reveal = () => {
+      this.map.setView(marker.getLatLng(), Math.max(this.map.getZoom(), 14));
+      marker.openPopup();
+    };
+    if (typeof this.markerLayer.zoomToShowLayer === "function") {
+      this.markerLayer.zoomToShowLayer(marker, reveal);
+    } else {
+      reveal();
+    }
+  }
+
+  popupTemplate(title, description, properties = {}) {
+    const detectionLine = Number.isFinite(Number(properties.detection_count))
+      ? `<p class="popup-description"><strong>${Number(properties.detection_count).toLocaleString()}</strong> detections · rank #${this.escapeHtml(properties.activity_rank || "—")}</p>`
+      : `<p class="popup-description"><strong>${this.escapeHtml(properties.species_count || 0)}</strong> indexed species · <strong>${this.escapeHtml(properties.threatened_species_richness || 0)}</strong> threatened</p>`;
     return `
       <div class="master-popup">
         <p class="popup-title">${this.escapeHtml(title)}</p>
         <p class="popup-description">${this.escapeHtml(description)}</p>
+        ${detectionLine}
       </div>
     `;
   }

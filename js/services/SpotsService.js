@@ -3,9 +3,13 @@ export class SpotsService {
     this.apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
   }
 
-  async listSpots({ speciesId = null } = {}) {
-    const query = speciesId ? `?species_id=${encodeURIComponent(speciesId)}` : "";
-    const response = await fetch(`${this.apiBaseUrl}/api/v1/spots${query}`, {
+  async listSpots({ speciesId = null, startDate = "", endDate = "" } = {}) {
+    const query = new URLSearchParams();
+    if (speciesId) query.set("species_id", speciesId);
+    if (startDate) query.set("start_date", startDate);
+    if (endDate) query.set("end_date", endDate);
+    const suffix = query.size ? `?${query}` : "";
+    const response = await fetch(`${this.apiBaseUrl}/api/v1/spots${suffix}`, {
       method: "GET",
       cache: "no-store",
       headers: {

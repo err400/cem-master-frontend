@@ -33,12 +33,15 @@
   <body>
     <div class="app-shell">
       <header class="site-header">
-        <div class="brand-block">
-          <p class="eyebrow">Continuous Ecological Monitoring</p>
-          <h1>CEM Master</h1>
-        </div>
+        <a class="brand-block" href="#map" aria-label="CEM Master home">
+          <span class="brand-mark" aria-hidden="true">❧</span>
+          <span>
+            <h1>CEM Master</h1>
+            <p class="eyebrow">Continuous Ecological Monitoring</p>
+          </span>
+        </a>
         <a class="cem-button" href="https://cem-cloud.onrender.com/" rel="noopener">
-          Do Your Own CEM
+          Do Your Own CEM <span aria-hidden="true">↗</span>
         </a>
       </header>
 
@@ -59,6 +62,17 @@
               />
               <datalist id="bird-suggestions"></datalist>
               <button type="submit">Search</button>
+              <fieldset class="date-filter">
+                <legend>Detection date (optional)</legend>
+                <label>
+                  From
+                  <input id="start-date" type="date" name="start_date" />
+                </label>
+                <label>
+                  To
+                  <input id="end-date" type="date" name="end_date" />
+                </label>
+              </fieldset>
             </form>
             <button id="show-all-spots" class="secondary-button" type="button">
               Show all spots
@@ -77,6 +91,15 @@
             </div>
             <dl id="species-network-metrics" class="metric-grid"></dl>
             <p id="species-image-credit" class="image-credit"></p>
+            <h3 class="sidebar-subheading">Most active spots</h3>
+            <ol id="active-spot-ranking" class="ranked-spots"></ol>
+          </section>
+
+          <section id="network-panel" class="dashboard-section">
+            <p class="section-kicker">Conservation overview</p>
+            <h2>Threatened-species richness</h2>
+            <p class="sidebar-copy">Public spots ranked by the number of VU, EN and CR species detected.</p>
+            <ol id="threatened-spot-ranking" class="ranked-spots"></ol>
           </section>
 
         </aside>
@@ -90,7 +113,38 @@
             <div id="status" class="status status--loading" role="status" aria-live="polite">
               Loading public monitoring spots...
             </div>
+            <div class="map-callout">
+              <span class="map-callout-icon" aria-hidden="true">◉</span>
+              <span>
+                <strong id="map-callout-title">Discover birdlife around you</strong>
+                <small id="map-callout-copy">Explore CEM spots and the biodiversity they hold.</small>
+              </span>
+            </div>
             <div id="map" class="map" aria-label="Leaflet map of public monitoring spots"></div>
+            <div id="map-legend" class="map-legend" hidden>
+              <strong>Detections</strong>
+              <span><i class="legend-dot legend-dot--low"></i>Lower</span>
+              <span><i class="legend-dot legend-dot--high"></i>Higher</span>
+            </div>
+          </section>
+
+          <section class="network-stats" aria-label="Current map summary">
+            <article>
+              <span class="stat-icon" aria-hidden="true">⌁</span>
+              <span><strong id="stat-birds">—</strong><small id="stat-birds-label">Bird records</small></span>
+            </article>
+            <article>
+              <span class="stat-icon" aria-hidden="true">⌖</span>
+              <span><strong id="stat-spots">—</strong><small>Monitoring spots</small></span>
+            </article>
+            <article>
+              <span class="stat-icon" aria-hidden="true">◉</span>
+              <span><strong id="stat-detections">—</strong><small>Detections shown</small></span>
+            </article>
+            <article>
+              <span class="stat-icon" aria-hidden="true">♣</span>
+              <span><strong id="stat-sources">—</strong><small>Contributing sources</small></span>
+            </article>
           </section>
 
           <section id="details-panel" class="analysis-output is-empty" aria-live="polite">

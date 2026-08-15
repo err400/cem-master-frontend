@@ -1,5 +1,6 @@
 (function () {
   window.CEM_MASTER_CONFIG = {
-    API_BASE_URL: "http://127.0.0.1:8001",
+    // Nginx forwards same-origin /api requests to the backend container.
+    API_BASE_URL: window.location.origin,
   };
 })();
