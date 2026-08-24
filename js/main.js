@@ -4,8 +4,10 @@ import { SpotsService } from "./services/SpotsService.js";
 
 const config = window.CEM_MASTER_CONFIG || {};
 const apiBaseUrl = config.API_BASE_URL || window.location.origin;
+const computeFrontendUrl = config.COMPUTE_FRONTEND_URL || "http://127.0.0.1:8080/";
 
 const elements = {
+  computeFrontendLink: document.querySelector("#compute-frontend-link"),
   status: document.querySelector("#status"),
   searchForm: document.querySelector("#bird-search-form"),
   searchInput: document.querySelector("#bird-search-input"),
@@ -44,6 +46,12 @@ let dashboardService;
 let selectedSpecies = null;
 let suggestionItems = [];
 let suggestionTimer = null;
+
+function configureExternalLinks() {
+  if (elements.computeFrontendLink) {
+    elements.computeFrontendLink.href = computeFrontendUrl;
+  }
+}
 
 function setStatus(message, type = "info") {
   elements.status.textContent = message;
@@ -155,6 +163,7 @@ function urlCell(url) {
 }
 
 function renderAssetLinks(container, assets = []) {
+  assets = Array.isArray(assets) ? assets : [];
   if (!assets.length) return;
   const rows = assets.map((asset) => ({
     analysis: asset.analysis || asset.label || "Analysis",
@@ -560,6 +569,7 @@ function bindDashboard() {
 }
 
 async function bootstrap() {
+  configureExternalLinks();
   setStatus("Loading public monitoring spots…", "loading");
   try {
     spotsService = new SpotsService({ apiBaseUrl });
