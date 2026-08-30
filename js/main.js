@@ -137,8 +137,22 @@ function createDataTable(columns, rows) {
   return wrapper;
 }
 
+// Only these schemes may ever reach an href. The URLs here are built by the
+// indexer from configuration plus a FileBrowser hash, so they are not
+// attacker-controlled today -- but this is a generic helper fed from API data,
+// and `javascript:` in an href executes on click.
+const SAFE_LINK_SCHEMES = new Set(["http:", "https:"]);
+
+function isSafeUrl(url) {
+  try {
+    return SAFE_LINK_SCHEMES.has(new URL(url, window.location.href).protocol);
+  } catch {
+    return false;
+  }
+}
+
 function linkCell(url, label) {
-  if (!url) return "—";
+  if (!url || !isSafeUrl(url)) return "—";
   const link = document.createElement("a");
   link.href = url;
   link.textContent = label;
@@ -159,7 +173,10 @@ function fileNameFromUrl(url, fallback) {
 }
 
 function urlCell(url) {
-  return linkCell(url, url || "URL unavailable");
+  // "Open" rather than the URL itself: a FileBrowser share link is a long
+  // opaque hash that wrecks the column width and tells the reader nothing. The
+  // full URL is still on the anchor's title attribute.
+  return linkCell(url, "Open");
 }
 
 function renderAssetLinks(container, assets = []) {

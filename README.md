@@ -1,124 +1,110 @@
-# CEM Master Web Application
+# cem-master-frontend
 
-Public bioacoustic dashboard for clustered monitoring spots, species discovery,
-date filtering, spot exploration, ecological summaries, and analysis job links.
+The **public map page** — the read-only catalogue of monitoring spots, species
+and analysis jobs. No login.
 
-## Architecture
+Plain HTML/JS/CSS plus Leaflet, served by nginx. No build step.
+
+## This repo does not start itself
+
+There is no `compose.yaml` here. It was removed deliberately.
+
+The master stack is started from **[cem-master-backend](../cem-master-backend)**,
+which owns every service in it — PostgreSQL, the API, the indexer, and this page:
+
+```bash
+cd ../cem-master-backend
+./scripts/dev-up.sh -d
+```
+
+Then open <http://localhost:8000>.
+
+**Why one owner.** This repo used to define a `backend` service as well, and the
+problems were concrete: both files published port 8001, so running both failed —
+or worse, left you talking to a backend you did not think you were talking to;
+the two definitions drifted; and the backend defined here had no database, so it
+failed its health check and the frontend, gated on `service_healthy`, never
+started at all. The fix was one owner per service. Moving the frontend service
+into `cem-master-backend` finishes that job: one compose file per stack.
+
+The two repos must be checked out **side by side**, because the compose file
+builds this one at `../cem-master-frontend`:
 
 ```text
-Browser
-  -> frontend container (Nginx)
-       -> /api proxy
-            -> backend container (FastAPI)
-                 -> cem-database container (PostgreSQL)
+your-workspace/
+├── cem-master-backend/     <- start here
+└── cem-master-frontend/    <- this repo
 ```
 
-The frontend and backend repositories must be beside one another:
+Set `MASTER_FRONTEND_CONTEXT` in `cem-master-backend/.env` if your layout
+differs.
+
+## How API calls reach the backend
+
+The browser only ever talks to its own origin:
 
 ```text
-main-website/
-├── cem-master/
-└── cem-master-backend/
+http://localhost:8000/api/v1/spots
 ```
 
-PostgreSQL is separately managed. Its Docker service must be named
-`cem-database`, contain the schema expected by the backend, and join the shared
-network `cem_master_network`.
-
-## Configure and run
-
-Create the shared network once if it does not already exist:
-
-```bash
-docker network create cem_master_network
-```
-
-Copy the environment template:
-
-```bash
-cp .env.example .env
-```
-
-Set the real PostgreSQL credentials in `.env`:
-
-```dotenv
-DATABASE_URL=postgresql+psycopg://cem_user:strong-password@cem-database:5432/cem_master
-```
-
-Start `cem-database` first, then run from this repository:
-
-```bash
-docker compose up --build -d
-```
-
-Open:
-
-- Dashboard: `http://127.0.0.1:8000`
-- API documentation: `http://127.0.0.1:8001/docs`
-- Proxied health: `http://127.0.0.1:8000/backend-health`
-
-Verify the complete connection:
-
-```bash
-docker network inspect cem_master_network
-docker compose ps
-docker compose logs -f backend
-curl http://127.0.0.1:8000/backend-health
-curl http://127.0.0.1:8000/api/v1/spots
-```
-
-The health endpoint queries PostgreSQL. It returns HTTP 503 when the backend is
-running but `cem-database` is unavailable.
-
-## How API forwarding works
-
-The browser requests the frontend origin:
-
-```text
-http://127.0.0.1:8000/api/v1/spots
-```
-
-Nginx forwards `/api/*` through the Docker network to:
+nginx forwards `/api/*` across the Docker network:
 
 ```text
 http://backend:8001/api/v1/spots
 ```
 
-The backend queries `cem-database` and sends JSON back along the same path. The
-browser never needs to resolve Docker hostnames.
+`backend` is a Docker DNS name on `cem_master_network`, resolvable only inside
+it. The browser never needs to know it exists, and there is no CORS to configure
+because everything is same-origin.
 
-## Mounted frontend source
+`GET /backend-health` proxies the API's health check, which queries PostgreSQL —
+it returns 503 when the API is up but the database is not.
 
-Compose bind-mounts `index.html`, `js/`, `styles/`, and `leaflet/` read-only
-into Nginx. It also bind-mounts the backend `app/` directory and runs Uvicorn
-reload. Source edits appear without rebuilding; dependency, Dockerfile, Compose,
-or Nginx changes require a rebuild.
+**The page deliberately does not wait for the API.** There is no
+`depends_on: service_healthy` on this service. If the backend is down the page
+still loads and its calls return 502, because a visible error is easier to
+diagnose than a container that silently refuses to start.
 
-PostgreSQL persistence belongs to the independently managed `cem-database`
-deployment. Stopping or removing these application containers does not remove
-its data volume.
+## Editing
 
-## Commands
+`index.html`, `js/`, `styles/` and `leaflet/` are bind-mounted read-only, so
+source edits need a restart, not a rebuild:
 
 ```bash
-docker compose stop
-docker compose start
-docker compose down
-docker compose up --build -d
-docker compose logs -f
+cd ../cem-master-backend && docker compose restart frontend
 ```
 
-Do not use `docker compose down -v` in the database project unless you intend to
-delete its PostgreSQL volume.
+Changes to `nginx.conf` or `Dockerfile` do need `--build`.
 
-## Main capabilities
+## What the page shows
 
-- Clustered Leaflet spots
-- Search by common or scientific bird name
-- Exact daily date filters
-- Detection-scaled map markers and active-spot rankings
-- Spot bird inventory and threatened-species richness
-- Migration class, activity hours, and seasonality
-- Hourly, daily, and monthly activity data
-- Acoustic, habitat, solar, and weather analysis fields
-- Analysis-job input/output filenames and public URLs
+- Leaflet map with marker clustering, sized and coloured by detection count
+- Search by common or scientific name; only spots with that bird stay lit
+- Date-range filtering
+- Per-spot: species inventory, threatened-species richness, activity rank
+- Per-species-at-spot: hourly / daily / monthly activity, confidence, first and
+  last detection, migration class, seasonality
+- Acoustic indices, and solar/weather analysis fields where present
+- Analysis jobs, with input and output filenames and download links
+
+Analysis job **Output URL** links are FileBrowser share links. They appear only
+when `FILEBROWSER_PUBLIC_URL` is set on the indexer — blank means outputs are
+named but not linked, which is the safe default. See
+`cem-master-backend/INDEXING-PLAN.md` §4.3a. **Input URL is always empty**: the
+compute app shares results only, never inputs.
+
+## Layout
+
+```
+index.html              single page
+js/main.js              rendering, map, tables
+js/services/            DashboardService — the API client
+js/features/            map and panel features
+nginx.conf              static serving + /api/ proxy to backend:8001
+```
+
+## Related
+
+- [cem-master-backend](../cem-master-backend) — API, indexer, and the compose file that starts this
+- [cem-backend](../cem-backend) — compute API that produces the data
+- [cem-frontend](../cem-frontend) — the compute page
