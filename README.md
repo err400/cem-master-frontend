@@ -81,7 +81,7 @@ Changes to `nginx.conf` or `Dockerfile` do need `--build`.
 - Leaflet map with marker clustering, sized and coloured by detection count
 - Search by common or scientific name; only spots with that bird stay lit
 - Date-range filtering
-- Per-spot: species inventory, threatened-species richness, activity rank
+- Per-spot: species inventory, species richness, activity rank
 - Per-species-at-spot: hourly / daily / monthly activity, confidence, first and
   last detection, migration class, seasonality
 - Acoustic indices, and solar/weather analysis fields where present

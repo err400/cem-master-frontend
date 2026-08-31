@@ -20,11 +20,10 @@ const elements = {
   speciesImage: document.querySelector("#species-image"),
   speciesCommonName: document.querySelector("#species-common-name"),
   speciesScientificName: document.querySelector("#species-scientific-name"),
-  speciesIucn: document.querySelector("#species-iucn"),
   speciesMetrics: document.querySelector("#species-network-metrics"),
   speciesImageCredit: document.querySelector("#species-image-credit"),
   activeSpotRanking: document.querySelector("#active-spot-ranking"),
-  threatenedSpotRanking: document.querySelector("#threatened-spot-ranking"),
+  topSpotRanking: document.querySelector("#top-spot-ranking"),
   mapLegend: document.querySelector("#map-legend"),
   mapCalloutTitle: document.querySelector("#map-callout-title"),
   mapCalloutCopy: document.querySelector("#map-callout-copy"),
@@ -254,7 +253,6 @@ function renderSpecies(species) {
   elements.speciesPanel.hidden = false;
   elements.speciesCommonName.textContent = species.common_name;
   elements.speciesScientificName.textContent = species.scientific_name;
-  elements.speciesIucn.textContent = species.iucn_category || "IUCN status unavailable";
   elements.speciesMetrics.replaceChildren();
 
   const metrics = species.network_metrics || {};
@@ -294,7 +292,6 @@ function renderSpotSummary(data) {
 
   elements.detailsContent.append(createMetricGrid({
     species_richness: summary.species_richness,
-    threatened_species_richness: summary.threatened_species_richness,
     total_detections: summary.total_detections,
     recording_days: summary.recording_days,
     contributing_projects: spot.source_count,
@@ -325,7 +322,6 @@ function renderSpotSummary(data) {
     appendSubheading(elements.detailsContent, "Bird inventory and occurrences");
     elements.detailsContent.append(createDataTable([
       { key: "common_name", label: "Bird" },
-      { key: "iucn_category", label: "IUCN" },
       { key: "detection_count", label: "Detections" },
       { key: "active_days", label: "Active days" },
       { key: "occurrence", label: "Occurrence", render: (_, row) => `${formatValue(row.first_occurrence)} – ${formatValue(row.last_occurrence)}` },
@@ -481,10 +477,10 @@ async function showAllSpots() {
     elements.mapCalloutTitle.textContent = "Discover birdlife around you";
     elements.mapCalloutCopy.textContent = "Explore CEM spots and the biodiversity they hold.";
     renderRanking(
-      elements.threatenedSpotRanking,
+      elements.topSpotRanking,
       spots.features,
-      "threatened_species_richness",
-      "threatened",
+      "species_count",
+      "species",
       (feature) => {
         mapManager.focusFeature(feature);
         handleSpotSelected(feature);
@@ -569,6 +565,19 @@ function bindDashboard() {
   });
 
   elements.showAll.addEventListener("click", showAllSpots);
+
+  const handleDateChange = async () => {
+    if (!selectedSpecies) return;
+    const query = elements.searchInput.value.trim() || selectedSpecies.common_name;
+    try {
+      await searchSpecies(query);
+    } catch (error) {
+      setStatus(error.message, "error");
+    }
+  };
+  elements.startDate.addEventListener("change", handleDateChange);
+  elements.endDate.addEventListener("change", handleDateChange);
+
   elements.searchInput.addEventListener("input", () => {
     clearTimeout(suggestionTimer);
     const query = elements.searchInput.value.trim();
