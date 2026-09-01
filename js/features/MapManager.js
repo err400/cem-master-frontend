@@ -160,7 +160,7 @@ export class MapManager {
   popupTemplate(title, description, properties = {}) {
     const detectionLine = Number.isFinite(Number(properties.detection_count))
       ? `<p class="popup-description"><strong>${Number(properties.detection_count).toLocaleString()}</strong> detections · rank #${this.escapeHtml(properties.activity_rank || "—")}</p>`
-      : `<p class="popup-description"><strong>${this.escapeHtml(properties.species_count || 0)}</strong> indexed species · <strong>${this.escapeHtml(properties.threatened_species_richness || 0)}</strong> threatened</p>`;
+      : `<p class="popup-description"><strong>${this.escapeHtml(properties.species_count || 0)}</strong> indexed species</p>`;
     return `
       <div class="master-popup">
         <p class="popup-title">${this.escapeHtml(title)}</p>
