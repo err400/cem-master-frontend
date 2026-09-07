@@ -367,6 +367,17 @@ h1 {
 
 .ranked-spots button { cursor: pointer; }
 .ranked-spots button:hover { color: var(--forest); }
+.rank-name {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+.rank-project {
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+}
 .rank-value { color: var(--forest); font-weight: 700; }
 
 .details-panel {
@@ -462,6 +473,260 @@ h1 {
 
 .data-table th { color: var(--ink-soft); font-size: 0.7rem; text-transform: uppercase; }
 .data-table a { color: var(--forest); font-weight: 700; }
+
+/* Spot Analysis Charts Grid (Side-by-side / Stacked Responsive) */
+.analysis-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.analysis-chart-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 18px 20px 20px;
+  box-shadow: 0 4px 16px rgba(58, 43, 18, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.analysis-chart-card h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.chart-subtitle {
+  margin: 3px 0 14px;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+/* Diurnal Bar Chart with Axes and Gridlines */
+.diurnal-chart-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.diurnal-plot-area {
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+  height: 180px;
+  padding-left: 42px;
+}
+
+.y-axis-label {
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.y-axis-ticks {
+  position: absolute;
+  left: 18px;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+.diurnal-gridlines {
+  position: absolute;
+  left: 42px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.diurnal-gridlines span {
+  width: 100%;
+  border-bottom: 1px solid rgba(120, 96, 50, 0.12);
+}
+
+.diurnal-bars-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.diurnal-bar {
+  flex: 1;
+  min-height: 2px;
+  background: linear-gradient(to top, #2f5d3b, #6f8f4e);
+  border-radius: 3px 3px 0 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.diurnal-bar:hover {
+  opacity: 0.9;
+  transform: scaleY(1.03);
+}
+
+.diurnal-x-axis {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 42px;
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
+/* Species Diurnal Heatmap Card with Vertical Legend */
+.heatmap-card-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.species-heatmap-table-wrap {
+  flex: 1;
+  overflow-x: auto;
+}
+
+.species-heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.species-heatmap-table th,
+.species-heatmap-table td {
+  padding: 2.5px 1.5px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.species-name-th {
+  width: 130px;
+  text-align: left !important;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding-bottom: 6px !important;
+}
+
+.hour-th {
+  font-size: 0.65rem;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding-bottom: 6px !important;
+}
+
+.species-name-td {
+  text-align: left !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 6px !important;
+}
+
+.heatmap-species-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.heatmap-species-btn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--forest-deep);
+}
+
+.heatmap-species-btn small {
+  margin-left: 4px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.heatmap-cell {
+  height: 16px;
+  min-width: 12px;
+  border-radius: 2px;
+  transition: transform 0.1s ease, outline 0.1s ease;
+  cursor: pointer;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.3);
+  outline: 2px solid var(--forest-deep);
+  z-index: 5;
+  position: relative;
+}
+
+.hour-axis-label {
+  font-size: 0.66rem;
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+  font-weight: 600;
+  padding-top: 6px !important;
+  text-align: center;
+}
+
+/* Vertical Legend on Right Side of Heatmap */
+.heatmap-vertical-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 155px;
+  padding-top: 14px;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vertical-gradient-bar {
+  width: 14px;
+  flex: 1;
+  margin: 6px 0;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #173f2b, #2f5d3b, #6f8f4e, #cbe0bf);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.15);
+}
 
 .analysis-note {
   padding: 11px 12px;
@@ -603,16 +868,63 @@ h1 {
   margin: 14px 16px;
 }
 
+.leaflet-control-zoom {
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-soft) !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: var(--bg-glass) !important;
+  color: var(--ink) !important;
+  border-bottom-color: var(--border-light) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--bg-surface-hover) !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--bg-surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-modal);
+}
+
+.leaflet-popup-content-wrapper {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.leaflet-popup-content {
+  margin: 14px 16px;
+}
+
 .master-popup {
   max-width: 260px;
 }
 
 .popup-title {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-family: var(--font-display);
   font-size: 1.08rem;
   font-weight: 600;
   color: var(--ink);
+}
+
+.popup-project-badge {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--forest-deep);
+  background: #eef5e9;
+  border: 1px solid rgba(47, 93, 59, 0.2);
+  border-radius: 4px;
 }
 
 .popup-description {
@@ -1026,6 +1338,11 @@ body {
   white-space: nowrap;
 }
 
+.cem-marker-icon-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+
 .cem-marker-icon {
   position: relative;
   display: grid !important;
@@ -1039,10 +1356,19 @@ body {
   box-shadow: 0 7px 14px rgba(23, 63, 43, 0.3);
   font-size: 1rem;
   transform: rotate(-45deg);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.cem-marker-icon:hover {
+  transform: rotate(-45deg) scale(1.14);
+  box-shadow: 0 9px 20px rgba(23, 63, 43, 0.5);
+  z-index: 1000 !important;
 }
 
 .cem-marker-icon span {
   transform: rotate(45deg);
+  pointer-events: none;
 }
 
 .legend-dot {

@@ -113,29 +113,35 @@ export class MapManager {
     const properties = feature.properties || {};
     const title = properties.name || "Monitoring spot";
     const description = properties.description || "No description available.";
+    const project = properties.source_project_id || "";
 
     const detectionCount = Number(properties.detection_count);
     const hasDetectionCount = Number.isFinite(detectionCount);
     const intensity = hasDetectionCount ? detectionCount / this.maximumDetectionCount : 0;
-    const marker = hasDetectionCount
-      ? window.L.circleMarker([latitude, longitude], {
-          radius: 8 + (Math.sqrt(intensity) * 12),
-          color: "#fffdf7",
-          weight: 2,
-          fillColor: intensity > 0.66 ? "#173f2b" : intensity > 0.33 ? "#4f7b4c" : "#88a96c",
-          fillOpacity: 0.9,
-        })
-      : window.L.marker([latitude, longitude], {
-          title,
-          alt: `${title} monitoring spot`,
-          icon: window.L.divIcon({
-            className: "cem-marker-icon",
-            html: "<span aria-hidden=\"true\">♪</span>",
-            iconSize: [34, 42],
-            iconAnchor: [17, 40],
-            popupAnchor: [0, -36],
-          }),
-        });
+
+    let markerGradient = "linear-gradient(145deg, #2f6b46, #173f2b)";
+    if (hasDetectionCount) {
+      markerGradient = intensity > 0.66
+        ? "linear-gradient(145deg, #1b4d32, #0d281a)"
+        : intensity > 0.33
+          ? "linear-gradient(145deg, #3d754e, #245233)"
+          : "linear-gradient(145deg, #6e945c, #4a703a)";
+    }
+
+    const displayTitle = project ? `${title} (${project})` : title;
+    const marker = window.L.marker([latitude, longitude], {
+      title: hasDetectionCount
+        ? `${displayTitle} — ${detectionCount.toLocaleString()} detections`
+        : displayTitle,
+      alt: `${displayTitle} monitoring spot`,
+      icon: window.L.divIcon({
+        className: "cem-marker-icon-wrap",
+        html: `<div class="cem-marker-icon" style="background: ${markerGradient};"><span aria-hidden="true">♪</span></div>`,
+        iconSize: [34, 42],
+        iconAnchor: [17, 40],
+        popupAnchor: [0, -36],
+      }),
+    });
 
     marker.bindPopup(this.popupTemplate(title, description, properties));
 
@@ -158,12 +164,16 @@ export class MapManager {
   }
 
   popupTemplate(title, description, properties = {}) {
+    const projectBadge = properties.source_project_id
+      ? `<span class="popup-project-badge">Project: <strong>${this.escapeHtml(properties.source_project_id)}</strong></span>`
+      : "";
     const detectionLine = Number.isFinite(Number(properties.detection_count))
       ? `<p class="popup-description"><strong>${Number(properties.detection_count).toLocaleString()}</strong> detections · rank #${this.escapeHtml(properties.activity_rank || "—")}</p>`
       : `<p class="popup-description"><strong>${this.escapeHtml(properties.species_count || 0)}</strong> indexed species</p>`;
     return `
       <div class="master-popup">
         <p class="popup-title">${this.escapeHtml(title)}</p>
+        ${projectBadge}
         <p class="popup-description">${this.escapeHtml(description)}</p>
         ${detectionLine}
       </div>

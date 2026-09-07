@@ -81,7 +81,11 @@ function createMetricGrid(metrics, labels = {}) {
     const wrapper = document.createElement("div");
     const term = document.createElement("dt");
     const detail = document.createElement("dd");
-    term.textContent = labels[key] || humanize(key);
+    term.textContent =
+      labels[key] ||
+      labels[key.toLowerCase()] ||
+      labels[key.toUpperCase()] ||
+      humanize(key);
     detail.textContent = formatValue(value);
     wrapper.append(term, detail);
     list.append(wrapper);
@@ -225,7 +229,10 @@ function renderRanking(container, features, valueKey, valueLabel, onSelect = nul
       const rank = document.createElement("span");
       rank.textContent = `#${index + 1}`;
       const name = document.createElement("span");
-      name.textContent = feature.properties.name;
+      name.className = "rank-name";
+      const spotName = feature.properties.name || "Spot";
+      const project = feature.properties.source_project_id;
+      name.innerHTML = `<strong>${escapeHtml(spotName)}</strong>${project ? `<small class="rank-project">${escapeHtml(project)}</small>` : ""}`;
       const value = document.createElement("span");
       value.className = "rank-value";
       value.textContent = `${formatValue(feature.properties[valueKey] || 0)} ${valueLabel}`;
@@ -283,6 +290,18 @@ function renderSpecies(species) {
     : "";
 }
 
+const ACOUSTIC_INDEX_LABELS = {
+  aci: "Acoustic Complexity (ACI)",
+  adi: "Acoustic Diversity (ADI)",
+  aei: "Acoustic Evenness (AEI)",
+  ndsi: "Soundscape Index (NDSI)",
+  bi: "Bioacoustic Index (BI)",
+  bio: "Bioacoustic Index (BIO)",
+  mfc: "Mid-Frequency Cover (MFC)",
+  cls: "Cluster Score (CLS)",
+  h: "Acoustic Entropy (H)",
+};
+
 function renderSpotSummary(data) {
   const { spot, summary, top_species: topSpecies = [], bird_inventory: inventory = [] } = data;
   showDetailsHeading();
@@ -299,7 +318,22 @@ function renderSpotSummary(data) {
 
   if (summary.acoustic_indices && Object.keys(summary.acoustic_indices).length) {
     appendSubheading(elements.detailsContent, "Soundscape indices");
-    elements.detailsContent.append(createMetricGrid(summary.acoustic_indices));
+    elements.detailsContent.append(createMetricGrid(summary.acoustic_indices, ACOUSTIC_INDEX_LABELS));
+  }
+
+  const hasHourly = summary.hourly_counts && summary.hourly_counts.some((count) => count > 0);
+  const heatmapCard = renderSpeciesHeatmapCard(inventory, 20);
+
+  if (hasHourly || heatmapCard) {
+    const grid = document.createElement("div");
+    grid.className = "analysis-charts-grid";
+    if (hasHourly) {
+      grid.append(renderDiurnalActivityCard(summary.hourly_counts, "Overall bird activity across the day"));
+    }
+    if (heatmapCard) {
+      grid.append(heatmapCard);
+    }
+    elements.detailsContent.append(grid);
   }
 
   if (topSpecies.length) {
@@ -320,34 +354,225 @@ function renderSpotSummary(data) {
 
   if (inventory.length) {
     appendSubheading(elements.detailsContent, "Bird inventory and occurrences");
-    elements.detailsContent.append(createDataTable([
+    const hasClassification = inventory.some((item) => item.migration_class);
+    const columns = [
       { key: "common_name", label: "Bird" },
       { key: "detection_count", label: "Detections" },
       { key: "active_days", label: "Active days" },
-      { key: "occurrence", label: "Occurrence", render: (_, row) => `${formatValue(row.first_occurrence)} – ${formatValue(row.last_occurrence)}` },
-    ], inventory));
+    ];
+    if (hasClassification) {
+      columns.push({ key: "migration_class", label: "Classification" });
+    }
+    columns.push({
+      key: "occurrence",
+      label: "Occurrence",
+      render: (_, row) => `${formatValue(row.first_occurrence)} – ${formatValue(row.last_occurrence)}`,
+    });
+    elements.detailsContent.append(createDataTable(columns, inventory));
   }
 
   renderAssetLinks(elements.detailsContent, summary.analysis_assets);
 }
 
-function renderHourlyChart(counts) {
-  const wrapper = document.createElement("div");
-  const chart = document.createElement("div");
-  chart.className = "hour-chart";
-  const max = Math.max(...counts, 1);
-  counts.forEach((count, hour) => {
-    const bar = document.createElement("span");
-    bar.className = "hour-bar";
-    bar.style.height = `${Math.max(2, (count / max) * 100)}%`;
-    bar.title = `${hour}:00 — ${count.toLocaleString()} detections`;
-    chart.append(bar);
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function renderSpeciesHeatmapCard(inventory = [], limit = 20) {
+  const birds = (Array.isArray(inventory) ? inventory : [])
+    .filter((bird) => Array.isArray(bird.hourly_counts) && bird.hourly_counts.some((c) => c > 0))
+    .slice(0, limit);
+
+  if (!birds.length) return null;
+
+  const card = document.createElement("div");
+  card.className = "analysis-chart-card heatmap-card";
+
+  const title = document.createElement("h4");
+  title.textContent = `24-hour species activity (Top ${birds.length})`;
+
+  const sub = document.createElement("p");
+  sub.className = "chart-subtitle";
+  sub.textContent = "Hourly distribution for most active species";
+
+  const cardBody = document.createElement("div");
+  cardBody.className = "heatmap-card-body";
+
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "species-heatmap-table-wrap";
+
+  const table = document.createElement("table");
+  table.className = "species-heatmap-table";
+
+  const tbody = document.createElement("tbody");
+  birds.forEach((bird) => {
+    const row = document.createElement("tr");
+
+    const nameTd = document.createElement("td");
+    nameTd.className = "species-name-td";
+    const nameBtn = document.createElement("button");
+    nameBtn.type = "button";
+    nameBtn.className = "heatmap-species-btn";
+    nameBtn.innerHTML = `<span>${escapeHtml(bird.common_name)}</span>`;
+    nameBtn.title = `Search and focus ${bird.common_name} (${Number(bird.detection_count || 0).toLocaleString()} detections)`;
+    nameBtn.addEventListener("click", () => {
+      searchSpecies(bird.common_name);
+    });
+    nameTd.append(nameBtn);
+    row.append(nameTd);
+
+    const maxBirdHour = Math.max(...bird.hourly_counts, 1);
+    for (let h = 0; h < 24; h++) {
+      const count = Number(bird.hourly_counts[h] || 0);
+      const td = document.createElement("td");
+      td.className = "heatmap-cell";
+      const ratio = count / maxBirdHour;
+
+      if (count > 0) {
+        td.style.backgroundColor =
+          ratio > 0.8
+            ? "#173f2b"
+            : ratio > 0.6
+              ? "#254e33"
+              : ratio > 0.4
+                ? "#3a6b47"
+                : ratio > 0.25
+                  ? "#5c8658"
+                  : ratio > 0.1
+                    ? "#87a87b"
+                    : "#b5cca9";
+        td.classList.add("has-activity");
+      } else {
+        td.style.backgroundColor = "rgba(44, 42, 35, 0.04)";
+      }
+
+      td.title = `${bird.common_name} — ${count.toLocaleString()} detections at ${String(h).padStart(2, "0")}:00`;
+      row.append(td);
+    }
+    tbody.append(row);
   });
-  const caption = document.createElement("div");
-  caption.className = "chart-caption";
-  caption.innerHTML = "<span>00:00</span><span>Hourly detections</span><span>23:00</span>";
-  wrapper.append(chart, caption);
-  return wrapper;
+  table.append(tbody);
+
+  const tfoot = document.createElement("tfoot");
+  const footRow = document.createElement("tr");
+  const emptyTh = document.createElement("th");
+  emptyTh.style.width = "130px";
+  footRow.append(emptyTh);
+
+  for (let h = 0; h < 24; h += 2) {
+    const th = document.createElement("th");
+    th.colSpan = 2;
+    th.className = "hour-axis-label";
+    th.textContent = String(h).padStart(2, "0");
+    footRow.append(th);
+  }
+  tfoot.append(footRow);
+  table.append(tfoot);
+
+  tableWrap.append(table);
+  cardBody.append(tableWrap);
+
+  const legend = document.createElement("div");
+  legend.className = "heatmap-vertical-legend";
+  legend.innerHTML = `
+    <span>More activity</span>
+    <div class="vertical-gradient-bar"></div>
+    <span>Less activity</span>
+  `;
+  cardBody.append(legend);
+
+  card.append(title, sub, cardBody);
+  return card;
+}
+
+function renderDiurnalActivityCard(counts = [], subtitle = "Overall bird activity across the day") {
+  const card = document.createElement("div");
+  card.className = "analysis-chart-card diurnal-card";
+
+  const title = document.createElement("h4");
+  title.textContent = "Species diurnal activity";
+
+  const sub = document.createElement("p");
+  sub.className = "chart-subtitle";
+  sub.textContent = subtitle;
+
+  const body = document.createElement("div");
+  body.className = "diurnal-chart-body";
+
+  const plotArea = document.createElement("div");
+  plotArea.className = "diurnal-plot-area";
+
+  const yLabel = document.createElement("span");
+  yLabel.className = "y-axis-label";
+  yLabel.textContent = "Detections";
+  plotArea.append(yLabel);
+
+  const maxVal = Math.max(...counts, 0);
+  let niceMax = 10;
+  if (maxVal > 0) {
+    if (maxVal <= 5) niceMax = 5;
+    else if (maxVal <= 10) niceMax = 10;
+    else if (maxVal <= 20) niceMax = 20;
+    else if (maxVal <= 40) niceMax = 40;
+    else if (maxVal <= 100) niceMax = Math.ceil(maxVal / 20) * 20;
+    else if (maxVal <= 500) niceMax = Math.ceil(maxVal / 50) * 50;
+    else niceMax = Math.ceil(maxVal / 100) * 100;
+  }
+
+  const tickSteps = 4;
+  const tickList = [];
+  for (let i = tickSteps; i >= 0; i--) {
+    tickList.push(Math.round((niceMax / tickSteps) * i));
+  }
+
+  const ticksWrap = document.createElement("div");
+  ticksWrap.className = "y-axis-ticks";
+  tickList.forEach((val) => {
+    const span = document.createElement("span");
+    span.textContent = val.toLocaleString();
+    ticksWrap.append(span);
+  });
+  plotArea.append(ticksWrap);
+
+  const gridWrap = document.createElement("div");
+  gridWrap.className = "diurnal-gridlines";
+  for (let i = 0; i <= tickSteps; i++) {
+    const line = document.createElement("span");
+    gridWrap.append(line);
+  }
+  plotArea.append(gridWrap);
+
+  const barsWrap = document.createElement("div");
+  barsWrap.className = "diurnal-bars-wrap";
+  for (let h = 0; h < 24; h++) {
+    const count = Number(counts[h] || 0);
+    const bar = document.createElement("span");
+    bar.className = "diurnal-bar";
+    const pct = niceMax > 0 ? (count / niceMax) * 100 : 0;
+    bar.style.height = `${count > 0 ? Math.max(3, pct) : 0}%`;
+    bar.title = `${String(h).padStart(2, "0")}:00 — ${count.toLocaleString()} detections`;
+    barsWrap.append(bar);
+  }
+  plotArea.append(barsWrap);
+  body.append(plotArea);
+
+  const xAxis = document.createElement("div");
+  xAxis.className = "diurnal-x-axis";
+  const xLabels = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "24:00"];
+  xLabels.forEach((lbl) => {
+    const span = document.createElement("span");
+    span.textContent = lbl;
+    xAxis.append(span);
+  });
+  body.append(xAxis);
+
+  card.append(title, sub, body);
+  return card;
 }
 
 function renderDailyChart(rows) {
@@ -394,9 +619,9 @@ function renderSpotSpeciesSummary(data) {
     latest_detection: observation.last_detection_date,
   }));
 
-  if (observation.hourly_counts?.length) {
-    appendSubheading(elements.detailsContent, "Hourly activity heatmap");
-    elements.detailsContent.append(renderHourlyChart(observation.hourly_counts));
+  if (observation.hourly_counts?.length && observation.hourly_counts.some((c) => c > 0)) {
+    appendSubheading(elements.detailsContent, "Diurnal soundscape activity");
+    elements.detailsContent.append(renderDiurnalActivityCard(observation.hourly_counts, "Species calling activity across the day"));
   }
 
   if (observation.daily_counts?.length) {
