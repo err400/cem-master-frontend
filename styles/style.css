@@ -1338,6 +1338,161 @@ body {
   white-space: nowrap;
 }
 
+.recordings-panel {
+  margin-top: 18px;
+}
+
+.recordings-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recordings-count,
+.recordings-empty {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.recordings-list {
+  display: grid;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.recording-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(36, 88, 58, 0.12);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.recording-card.is-playing {
+  border-color: rgba(47, 112, 71, 0.35);
+  background: #f7fbf4;
+}
+
+.recording-play {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: #2f7047;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.recording-play:hover {
+  background: #24583a;
+}
+
+.recording-body {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.recording-topline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.82rem;
+}
+
+.recording-topline strong {
+  overflow: hidden;
+  color: var(--forest-deep);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recording-topline span {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.recording-species {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.recording-species span {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: var(--forest-deep);
+  background: #edf4e9;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recording-waveform {
+  display: grid;
+  grid-template-columns: repeat(38, 1fr);
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+}
+
+.recording-waveform span {
+  display: block;
+  min-height: 4px;
+  border-radius: 999px;
+  background: #d7e3d0;
+}
+
+.recording-waveform span.is-played {
+  background: #2f7047;
+}
+
+.recording-times,
+.recordings-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.recordings-pager {
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.recordings-pager button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(36, 88, 58, 0.18);
+  border-radius: 6px;
+  color: var(--forest-deep);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.recordings-pager button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .cem-marker-icon-wrap {
   background: transparent !important;
   border: none !important;
@@ -1419,4 +1574,23 @@ body {
   .data-table a {
     max-width: 170px;
   }
+
+  .recording-card {
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 9px;
+  }
+
+  .recording-topline {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .recording-topline span {
+    white-space: normal;
+  }
+
+  .recording-species {
+    white-space: normal;
+  }
+
 }

@@ -31,6 +31,21 @@ export class DashboardService {
     return this.request(`/api/v1/spots/${encodeURIComponent(spotId)}/summary`);
   }
 
+  listSpotRecordings(
+    spotId,
+    { startDate = "", endDate = "", page = 1, limit = 25 } = {},
+  ) {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (startDate) query.set("start_date", startDate);
+    if (endDate) query.set("end_date", endDate);
+    return this.request(
+      `/api/v1/spots/${encodeURIComponent(spotId)}/recordings?${query}`,
+    );
+  }
+
   getSpotSpeciesSummary(spotId, speciesId, { startDate = "", endDate = "" } = {}) {
     const query = new URLSearchParams();
     if (startDate) query.set("start_date", startDate);
@@ -38,6 +53,22 @@ export class DashboardService {
     const suffix = query.size ? `?${query}` : "";
     return this.request(
       `/api/v1/spots/${encodeURIComponent(spotId)}/species/${encodeURIComponent(speciesId)}${suffix}`,
+    );
+  }
+
+  listSpotSpeciesRecordings(
+    spotId,
+    speciesId,
+    { startDate = "", endDate = "", page = 1, limit = 25 } = {},
+  ) {
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (startDate) query.set("start_date", startDate);
+    if (endDate) query.set("end_date", endDate);
+    return this.request(
+      `/api/v1/spots/${encodeURIComponent(spotId)}/species/${encodeURIComponent(speciesId)}/recordings?${query}`,
     );
   }
 

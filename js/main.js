@@ -45,6 +45,7 @@ let dashboardService;
 let selectedSpecies = null;
 let suggestionItems = [];
 let suggestionTimer = null;
+let activeAudio = null;
 
 function configureExternalLinks() {
   if (elements.computeFrontendLink) {
@@ -182,6 +183,14 @@ function urlCell(url) {
   return linkCell(url, "Open");
 }
 
+function optionalUrlCell(url, emptyLabel = "Not shared") {
+  return url ? urlCell(url) : emptyLabel;
+}
+
+function apiUrl(path) {
+  return new URL(path, `${apiBaseUrl.replace(/\/+$/, "")}/`).href;
+}
+
 function renderAssetLinks(container, assets = []) {
   assets = Array.isArray(assets) ? assets : [];
   if (!assets.length) return;
@@ -302,7 +311,7 @@ const ACOUSTIC_INDEX_LABELS = {
   h: "Acoustic Entropy (H)",
 };
 
-function renderSpotSummary(data) {
+async function renderSpotSummary(data, dates = {}) {
   const { spot, summary, top_species: topSpecies = [], bird_inventory: inventory = [] } = data;
   showDetailsHeading();
   elements.detailsTitle.textContent = spot.name;
@@ -372,6 +381,11 @@ function renderSpotSummary(data) {
   }
 
   renderAssetLinks(elements.detailsContent, summary.analysis_assets);
+
+  await renderRecordingsBrowser(elements.detailsContent, spot.id, null, dates, {
+    title: "Recordings at this spot",
+    emptyText: "No playable public recordings are indexed for this spot.",
+  });
 }
 
 function escapeHtml(value) {
@@ -600,7 +614,214 @@ function renderDailyChart(rows) {
   return wrapper;
 }
 
-function renderSpotSpeciesSummary(data) {
+function formatDuration(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) return "--:--";
+  const mins = Math.floor(value / 60);
+  const secs = Math.floor(value % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function formatRecordingDate(recording) {
+  const date = recording.recorded_date || "Unknown date";
+  if (recording.hour == null) return date;
+  const hour = String(recording.hour).padStart(2, "0");
+  const minute = String(recording.minute || 0).padStart(2, "0");
+  return `${date} ${hour}:${minute}`;
+}
+
+function waveformHeights(seedText, count = 38) {
+  let seed = 0;
+  for (const ch of String(seedText)) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+  const heights = [];
+  for (let i = 0; i < count; i++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    heights.push(18 + (seed % 62));
+  }
+  return heights;
+}
+
+function updateWaveformProgress(bars, ratio) {
+  const played = Math.floor(Math.max(0, Math.min(1, ratio)) * bars.length);
+  bars.forEach((bar, index) => {
+    bar.classList.toggle("is-played", index < played);
+  });
+}
+
+function createRecordingCard(recording) {
+  const card = document.createElement("article");
+  card.className = "recording-card";
+
+  const audio = new Audio(apiUrl(recording.audio_url));
+  audio.preload = "none";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "recording-play";
+  button.textContent = "▶";
+  button.setAttribute("aria-label", `Play ${recording.filename}`);
+
+  const body = document.createElement("div");
+  body.className = "recording-body";
+
+  const top = document.createElement("div");
+  top.className = "recording-topline";
+  const name = document.createElement("strong");
+  name.textContent = recording.filename;
+  const meta = document.createElement("span");
+  const confidence = recording.max_confidence == null
+    ? ""
+    : ` · max ${Math.round(Number(recording.max_confidence) * 100)}%`;
+  meta.textContent = `${formatRecordingDate(recording)} · ${Number(recording.detection_count || 0).toLocaleString()} detections${confidence}`;
+  top.append(name, meta);
+
+  const species = Array.isArray(recording.species) ? recording.species : [];
+  const speciesLine = document.createElement("div");
+  speciesLine.className = "recording-species";
+  species.forEach((item) => {
+    const label = item.common_name || item.scientific_name;
+    if (!label) return;
+    const chip = document.createElement("span");
+    chip.textContent = label;
+    speciesLine.append(chip);
+  });
+
+  const waveform = document.createElement("div");
+  waveform.className = "recording-waveform";
+  const bars = waveformHeights(`${recording.audio_id}:${recording.filename}`).map((height) => {
+    const bar = document.createElement("span");
+    bar.style.height = `${height}%`;
+    waveform.append(bar);
+    return bar;
+  });
+
+  const times = document.createElement("div");
+  times.className = "recording-times";
+  const current = document.createElement("span");
+  current.textContent = "0:00";
+  const duration = document.createElement("span");
+  duration.textContent = formatDuration(recording.duration_seconds);
+  times.append(current, duration);
+
+  button.addEventListener("click", async () => {
+    if (!audio.paused) {
+      audio.pause();
+      return;
+    }
+    if (activeAudio && activeAudio !== audio) activeAudio.pause();
+    activeAudio = audio;
+    try {
+      await audio.play();
+    } catch (error) {
+      console.error(error);
+      button.textContent = "▶";
+    }
+  });
+
+  audio.addEventListener("play", () => {
+    button.textContent = "Ⅱ";
+    button.setAttribute("aria-label", `Pause ${recording.filename}`);
+    card.classList.add("is-playing");
+  });
+  audio.addEventListener("pause", () => {
+    button.textContent = "▶";
+    button.setAttribute("aria-label", `Play ${recording.filename}`);
+    card.classList.remove("is-playing");
+  });
+  audio.addEventListener("loadedmetadata", () => {
+    if (Number.isFinite(audio.duration)) duration.textContent = formatDuration(audio.duration);
+  });
+  audio.addEventListener("timeupdate", () => {
+    current.textContent = formatDuration(audio.currentTime);
+    const length = Number.isFinite(audio.duration) && audio.duration > 0
+      ? audio.duration
+      : Number(recording.duration_seconds || 0);
+    updateWaveformProgress(bars, length > 0 ? audio.currentTime / length : 0);
+  });
+  audio.addEventListener("ended", () => {
+    updateWaveformProgress(bars, 0);
+    current.textContent = "0:00";
+  });
+
+  body.append(top);
+  if (speciesLine.childElementCount) body.append(speciesLine);
+  body.append(waveform, times);
+  card.append(button, body);
+  return card;
+}
+
+async function renderRecordingsBrowser(container, spotId, speciesId = null, dates = {}, options = {}) {
+  const panel = document.createElement("section");
+  panel.className = "recordings-panel";
+  const header = document.createElement("div");
+  header.className = "recordings-header";
+  const title = document.createElement("h3");
+  title.className = "detail-subheading";
+  title.textContent = options.title || "Recordings with this bird";
+  const counter = document.createElement("span");
+  counter.className = "recordings-count";
+  header.append(title, counter);
+
+  const list = document.createElement("div");
+  list.className = "recordings-list";
+  const pager = document.createElement("div");
+  pager.className = "recordings-pager";
+  panel.append(header, list, pager);
+  container.append(panel);
+
+  const state = { page: 1, limit: 10 };
+
+  const load = async (page) => {
+    state.page = page;
+    list.textContent = "Loading recordings...";
+    pager.replaceChildren();
+    try {
+      const request = {
+        ...dates,
+        page: state.page,
+        limit: state.limit,
+      };
+      const data = speciesId == null
+        ? await dashboardService.listSpotRecordings(spotId, request)
+        : await dashboardService.listSpotSpeciesRecordings(spotId, speciesId, request);
+      counter.textContent = `${Number(data.total || 0).toLocaleString()} total`;
+      list.replaceChildren();
+      if (!data.items?.length) {
+        const empty = document.createElement("p");
+        empty.className = "recordings-empty";
+        empty.textContent = options.emptyText || "No playable public recordings are indexed for this selection.";
+        list.append(empty);
+      } else {
+        data.items.forEach((recording) => list.append(createRecordingCard(recording)));
+      }
+
+      const previous = document.createElement("button");
+      previous.type = "button";
+      previous.textContent = "Previous";
+      previous.disabled = !data.has_previous;
+      previous.addEventListener("click", () => load(state.page - 1));
+
+      const pageLabel = document.createElement("span");
+      const totalPages = Math.max(1, Math.ceil(Number(data.total || 0) / state.limit));
+      pageLabel.textContent = `Page ${state.page} of ${totalPages}`;
+
+      const next = document.createElement("button");
+      next.type = "button";
+      next.textContent = "Next";
+      next.disabled = !data.has_next;
+      next.addEventListener("click", () => load(state.page + 1));
+      pager.append(previous, pageLabel, next);
+    } catch (error) {
+      console.error(error);
+      counter.textContent = "";
+      list.textContent = "Unable to load recordings for this bird and spot.";
+    }
+  };
+
+  await load(1);
+}
+
+async function renderSpotSpeciesSummary(data, dates = {}) {
   const { spot, species, observation, jobs = [] } = data;
   showDetailsHeading();
   elements.detailsTitle.textContent = `${species.common_name} at ${spot.name}`;
@@ -649,14 +870,16 @@ function renderSpotSpeciesSummary(data) {
 
   renderAssetLinks(elements.detailsContent, observation.analysis_assets);
 
+  await renderRecordingsBrowser(elements.detailsContent, spot.id, species.id, dates);
+
   if (jobs.length) {
     appendSubheading(elements.detailsContent, "Analysis jobs");
     elements.detailsContent.append(createDataTable([
       { key: "job_id", label: "Job ID" },
       { key: "input_file", label: "Input file", render: (value, row) => value || fileNameFromUrl(row.input_url, "Input dataset") },
-      { key: "input_url", label: "Input URL", render: (url) => urlCell(url) },
+      { key: "input_url", label: "Input URL", render: (url) => optionalUrlCell(url) },
       { key: "output_file", label: "Output file", render: (value, row) => value || fileNameFromUrl(row.output_url, "Output file") },
-      { key: "output_url", label: "Output URL", render: (url) => urlCell(url) },
+      { key: "output_url", label: "Output URL", render: (url) => optionalUrlCell(url) },
     ], jobs));
   }
 }
@@ -670,15 +893,16 @@ async function handleSpotSelected(feature) {
   elements.detailsContent.replaceChildren();
   try {
     if (selectedSpecies) {
-      renderSpotSpeciesSummary(
-        await dashboardService.getSpotSpeciesSummary(
-          spotId,
-          selectedSpecies.id,
-          selectedDates(),
-        ),
+      const dates = selectedDates();
+      const summary = await dashboardService.getSpotSpeciesSummary(
+        spotId,
+        selectedSpecies.id,
+        dates,
       );
+      await renderSpotSpeciesSummary(summary, dates);
     } else {
-      renderSpotSummary(await dashboardService.getSpotSummary(spotId));
+      const dates = selectedDates();
+      await renderSpotSummary(await dashboardService.getSpotSummary(spotId), dates);
     }
   } catch (error) {
     showDetailsHeading();
