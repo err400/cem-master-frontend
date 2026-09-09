@@ -207,7 +207,7 @@ function renderAssetLinks(container, assets = []) {
     [
       { key: "analysis", label: "Analysis" },
       { key: "input_file", label: "Input file" },
-      { key: "input_url", label: "Input URL", render: (url) => urlCell(url) },
+      // No Input URL column -- see the note in appendJobsTable().
       { key: "output_file", label: "Output file" },
       { key: "output_url", label: "Output URL", render: (url) => urlCell(url) },
     ],
@@ -520,6 +520,8 @@ async function renderSpotSummary(data, dates = {}) {
     title: "Recordings at this spot",
     emptyText: "No playable public recordings are indexed for this spot.",
   });
+
+  appendJobsTable(elements.detailsContent, data.jobs);
 }
 
 function escapeHtml(value) {
@@ -956,7 +958,7 @@ async function renderRecordingsBrowser(container, spotId, speciesId = null, date
 }
 
 async function renderSpotSpeciesSummary(data, dates = {}) {
-  const { spot, species, observation, jobs = [] } = data;
+  const { spot, species, observation } = data;
   showDetailsHeading();
   elements.detailsTitle.textContent = `${species.common_name} at ${spot.name}`;
   elements.detailsIntro.textContent = `${spot.latitude.toFixed(5)}, ${spot.longitude.toFixed(5)}`;
@@ -1024,16 +1026,26 @@ async function renderSpotSpeciesSummary(data, dates = {}) {
 
   await renderRecordingsBrowser(elements.detailsContent, spot.id, species.id, dates);
 
-  if (jobs.length) {
-    appendSubheading(elements.detailsContent, "Analysis jobs");
-    elements.detailsContent.append(createDataTable([
-      { key: "job_id", label: "Job ID" },
-      { key: "input_file", label: "Input file", render: (value, row) => value || fileNameFromUrl(row.input_url, "Input dataset") },
-      { key: "input_url", label: "Input URL", render: (url) => optionalUrlCell(url) },
-      { key: "output_file", label: "Output file", render: (value, row) => value || fileNameFromUrl(row.output_url, "Output file") },
-      { key: "output_url", label: "Output URL", render: (url) => optionalUrlCell(url) },
-    ], jobs));
-  }
+  // No Analysis jobs table here. Runs are spot-level provenance and are not
+  // filtered by species, so listing them under a bird implied a link that does
+  // not exist -- an acoustic-indices run has nothing to do with the selected
+  // species. They live on the spot panel; clear the species to see them.
+}
+
+function appendJobsTable(container, jobs = []) {
+  jobs = Array.isArray(jobs) ? jobs : [];
+  if (!jobs.length) return;
+  appendSubheading(container, "Analysis jobs");
+  container.append(createDataTable([
+    { key: "job_id", label: "Job ID" },
+    { key: "input_file", label: "Input file", render: (value) => value || "Input dataset" },
+    // Deliberately no Input URL column. A link there would have to point at the
+    // job's raw audio, which includes recordings whose only detections are
+    // withheld species -- writer.py hardcodes input_url to None for the same
+    // reason, so the column could only ever read "Not shared".
+    { key: "output_file", label: "Output file", render: (value, row) => value || fileNameFromUrl(row.output_url, "Output file") },
+    { key: "output_url", label: "Output URL", render: (url) => optionalUrlCell(url) },
+  ], jobs));
 }
 
 async function handleSpotSelected(feature) {

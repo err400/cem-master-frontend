@@ -90,8 +90,18 @@ Changes to `nginx.conf` or `Dockerfile` do need `--build`.
 Analysis job **Output URL** links are FileBrowser share links. They appear only
 when `FILEBROWSER_PUBLIC_URL` is set on the indexer — blank means outputs are
 named but not linked, which is the safe default. See
-`cem-master-backend/INDEXING-PLAN.md` §4.3a. **Input URL is always empty**: the
-compute app shares results only, never inputs.
+`cem-master-backend/INDEXING-PLAN.md` §4.3a.
+
+The **Analysis jobs** table lives on the spot panel, not the species panel.
+Runs are spot-level provenance — the indexer writes no species on them — so
+listing them under a selected bird implied a filter that never existed. Clear
+the species selection (or click a spot directly) to see them.
+
+There is deliberately **no Input URL column**. The compute app shares results
+only, never inputs — a link to a job's input folder would expose the raw audio,
+including recordings whose only detections are withheld species. Input
+*filenames* are still listed, and the filtered "Recordings with this bird" list
+is the public view of the inputs.
 
 ## Layout
 
