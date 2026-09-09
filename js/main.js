@@ -17,6 +17,7 @@ const elements = {
   showAll: document.querySelector("#show-all-spots"),
   mapMode: document.querySelector("#map-mode"),
   speciesPanel: document.querySelector("#species-panel"),
+  speciesSnippetWrap: document.querySelector("#species-snippet-wrap"),
   speciesImage: document.querySelector("#species-image"),
   speciesCommonName: document.querySelector("#species-common-name"),
   speciesScientificName: document.querySelector("#species-scientific-name"),
@@ -265,11 +266,131 @@ function showDetailsHeading() {
   elements.detailsHeading.hidden = false;
 }
 
+function createSnippetPlayer(snippet, { label = "Play Call (9s)", subtitle = "", compact = false } = {}) {
+  if (!snippet || !snippet.url) return null;
+
+  const container = document.createElement("div");
+  container.className = compact ? "snippet-player snippet-player--compact" : "snippet-player";
+
+  const audio = new Audio(apiUrl(snippet.url));
+  audio.preload = "none";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "play-snippet-btn";
+  const defaultLabel = compact ? "9s" : label;
+  btn.innerHTML = `<span class="snippet-play-icon" aria-hidden="true">▶</span> <span class="snippet-play-label">${escapeHtml(defaultLabel)}</span>`;
+  btn.title = `Play 9s bird call clip${snippet.confidence ? ` (max confidence: ${Math.round(snippet.confidence * 100)}%)` : ""}`;
+
+  const metaWrap = document.createElement("div");
+  metaWrap.className = "snippet-meta";
+
+  if (snippet.confidence != null && !compact) {
+    const confBadge = document.createElement("span");
+    confBadge.className = "snippet-badge snippet-conf";
+    confBadge.textContent = `${Math.round(Number(snippet.confidence) * 100)}% conf`;
+    metaWrap.append(confBadge);
+  }
+
+  if (snippet.spot_name && !compact) {
+    const spotBadge = document.createElement("span");
+    spotBadge.className = "snippet-badge snippet-spot";
+    spotBadge.textContent = snippet.spot_name;
+    metaWrap.append(spotBadge);
+  } else if (subtitle && !compact) {
+    const subSpan = document.createElement("span");
+    subSpan.className = "snippet-sub";
+    subSpan.textContent = subtitle;
+    metaWrap.append(subSpan);
+  }
+
+  const wave = document.createElement("div");
+  wave.className = "snippet-wave";
+  wave.innerHTML = `<span></span><span></span><span></span><span></span>`;
+
+  btn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!audio.paused) {
+      audio.pause();
+      return;
+    }
+    if (activeAudio && activeAudio !== audio) {
+      activeAudio.pause();
+    }
+    activeAudio = audio;
+    btn.classList.add("is-loading");
+    const iconSpan = btn.querySelector(".snippet-play-icon");
+    const labelSpan = btn.querySelector(".snippet-play-label");
+    if (iconSpan) iconSpan.textContent = "⏳";
+    try {
+      await audio.play();
+    } catch (err) {
+      console.error("Audio snippet playback error:", err);
+      btn.classList.remove("is-loading");
+      if (iconSpan) iconSpan.textContent = "⚠️";
+      if (labelSpan) labelSpan.textContent = "Error";
+      setTimeout(() => {
+        if (iconSpan) iconSpan.textContent = "▶";
+        if (labelSpan) labelSpan.textContent = defaultLabel;
+      }, 3000);
+    }
+  });
+
+  audio.addEventListener("play", () => {
+    btn.classList.remove("is-loading");
+    btn.classList.add("is-playing");
+    const iconSpan = btn.querySelector(".snippet-play-icon");
+    const labelSpan = btn.querySelector(".snippet-play-label");
+    if (iconSpan) iconSpan.textContent = "⏸";
+    if (labelSpan) labelSpan.textContent = compact ? "9s" : "Playing...";
+    container.classList.add("is-playing");
+  });
+
+  const resetState = () => {
+    btn.classList.remove("is-loading", "is-playing");
+    const iconSpan = btn.querySelector(".snippet-play-icon");
+    const labelSpan = btn.querySelector(".snippet-play-label");
+    if (iconSpan) iconSpan.textContent = "▶";
+    if (labelSpan) labelSpan.textContent = defaultLabel;
+    container.classList.remove("is-playing");
+  };
+
+  audio.addEventListener("pause", resetState);
+  audio.addEventListener("ended", () => {
+    resetState();
+    audio.currentTime = 0;
+  });
+
+  container.append(btn);
+  if (metaWrap.childElementCount) container.append(metaWrap);
+  container.append(wave);
+
+  return container;
+}
+
 function renderSpecies(species) {
   elements.speciesPanel.hidden = false;
   elements.speciesCommonName.textContent = species.common_name;
   elements.speciesScientificName.textContent = species.scientific_name;
   elements.speciesMetrics.replaceChildren();
+
+  if (elements.speciesSnippetWrap) {
+    elements.speciesSnippetWrap.replaceChildren();
+    if (species.snippet && species.snippet.url) {
+      const player = createSnippetPlayer(species.snippet, {
+        label: "Play Call (9s)",
+        subtitle: species.snippet.spot_name ? `Recorded at ${species.snippet.spot_name}` : "",
+      });
+      if (player) {
+        elements.speciesSnippetWrap.append(player);
+        elements.speciesSnippetWrap.hidden = false;
+      } else {
+        elements.speciesSnippetWrap.hidden = true;
+      }
+    } else {
+      elements.speciesSnippetWrap.hidden = true;
+    }
+  }
 
   const metrics = species.network_metrics || {};
   if (Object.keys(metrics).length) {
@@ -364,6 +485,7 @@ async function renderSpotSummary(data, dates = {}) {
   if (inventory.length) {
     appendSubheading(elements.detailsContent, "Bird inventory and occurrences");
     const hasClassification = inventory.some((item) => item.migration_class);
+    const hasSnippets = inventory.some((item) => item.snippet && item.snippet.url);
     const columns = [
       { key: "common_name", label: "Bird" },
       { key: "detection_count", label: "Detections" },
@@ -377,6 +499,18 @@ async function renderSpotSummary(data, dates = {}) {
       label: "Occurrence",
       render: (_, row) => `${formatValue(row.first_occurrence)} – ${formatValue(row.last_occurrence)}`,
     });
+    if (hasSnippets) {
+      columns.push({
+        key: "snippet",
+        label: "Call",
+        render: (snippet) => {
+          if (!snippet || !snippet.url) return "—";
+          return createSnippetPlayer(snippet, {
+            compact: true,
+          });
+        },
+      });
+    }
     elements.detailsContent.append(createDataTable(columns, inventory));
   }
 
@@ -839,6 +973,24 @@ async function renderSpotSpeciesSummary(data, dates = {}) {
     first_detection: observation.first_detection_date,
     latest_detection: observation.last_detection_date,
   }));
+
+  if (observation.snippet && observation.snippet.url) {
+    const playerCard = document.createElement("div");
+    playerCard.className = "species-snippet-banner";
+    const header = document.createElement("div");
+    header.className = "snippet-banner-header";
+    const title = document.createElement("strong");
+    title.textContent = "Representative focal call (9s audio clip)";
+    header.append(title);
+    const player = createSnippetPlayer(observation.snippet, {
+      label: "Play Call (9s)",
+      subtitle: `${spot.name} · highest confidence detection`,
+    });
+    if (player) {
+      playerCard.append(header, player);
+      elements.detailsContent.append(playerCard);
+    }
+  }
 
   if (observation.hourly_counts?.length && observation.hourly_counts.some((c) => c > 0)) {
     appendSubheading(elements.detailsContent, "Diurnal soundscape activity");
