@@ -1,120 +1,129 @@
-# cem-master-frontend
+# CEM Master — Frontend Map & Dashboard
 
-The **public map page** — the read-only catalogue of monitoring spots, species
-and analysis jobs. No login.
+Public, interactive biodiversity map, diurnal activity charts, species search, and 9-second bird call audio player for the Continuous Ecological Monitoring (CEM) network.
 
-Plain HTML/JS/CSS plus Leaflet, served by nginx. No build step.
+---
 
-## This repo does not start itself
+## 1. Directory Mounts & Volume Layout (§1)
 
-There is no `compose.yaml` here. It was removed deliberately.
+The frontend is served via Nginx with live code bind-mounted for rapid iteration. No models, sensitive credentials, or data files are baked into the image:
 
-The master stack is started from **[cem-master-backend](../cem-master-backend)**,
-which owns every service in it — PostgreSQL, the API, the indexer, and this page:
+| Host Folder | Container Path | Purpose & Lifecycle |
+| :--- | :--- | :--- |
+| `code/` (`./index.html`, `./js`, `./styles`, `./leaflet`) | `/usr/share/nginx/html` | HTML/JS/CSS source assets. Live-edited on host; refreshed via browser. |
+| `models/` | `/app/models` | N/A (Frontend is a client UI). |
+| `data/` (`../cem-backend/data`) | `/data` | Read-only access to public audio snippets and project assets via backend proxy. |
+
+- **Acceptance**: Code changes take effect without rebuilding the image; data remains persisted under `data/`.
+
+---
+
+## 2. Compute & API Orchestration (§2)
+
+The frontend communicates with the master backend API, which delegates detection rollups and audio indexing locally or via Apache Airflow depending on `AIRFLOW_API_BASE`:
+
+- **Airflow Active**: If `AIRFLOW_API_BASE` is set in the backend environment, long-running pipeline jobs and indexer runs are triggered via Airflow STACD DAGs.
+- **Local Active**: When unset, the in-container indexer process processes detection files directly.
+
+---
+
+## 3. Docker Registry & Image Pull (§3)
+
+The frontend image is pre-built and published to GitHub Container Registry and Docker Hub:
 
 ```bash
+docker pull ghcr.io/corestack-org/cem-master-frontend:latest
+```
+
+---
+
+## 4. Authentication & Google SSO (§4)
+
+- **Read-Only Public Catalog**: Exploring monitoring spots, searching bird species, inspecting diurnal activity heatmaps, and listening to 9s audio snippets does not require authentication.
+- **Single Sign-On (SSO)**: Google Identity Services / OAuth 2.0 (`GOOGLE_CLIENT_ID` in `.env`) is used for administrative access and authenticated triggers. Client secrets are never embedded in client-side code.
+
+---
+
+## 5. Logging & Observability (§5)
+
+- **Log Path**: `data/logs/cem-master-frontend/` (Nginx access and error logs).
+- **Log Level**: Governed by `LOG_LEVEL` (`debug` | `info` | `error`).
+
+```bash
+# View live web server logs
+docker compose logs -f frontend
+```
+
+---
+
+## 6. Unified Same-Origin Architecture (§6) & Dynamic API Base URL (§7)
+
+- **Same-Origin Reverse Proxy**: The frontend container runs on port `8000` and reverse-proxies `/api/*` requests to the FastAPI backend (`backend:8001`) over the internal Docker network.
+- **Dynamic Configuration**: `API_BASE_URL` in `js/config.js` defaults to `window.location.origin` (relative `/`). No localhost addresses or production hostnames are hardcoded into JavaScript files.
+
+---
+
+## 8. Architecture Diagram (§8)
+
+```mermaid
+flowchart TD
+    subgraph Client ["Client Browser"]
+        Browser["User Browser<br/>(http://localhost:8000)"]
+    end
+
+    subgraph AppStack ["CEM Master Stack (Docker)"]
+        Frontend["Frontend (Nginx :8000)<br/>• Leaflet Map & Markers<br/>• Diurnal Activity Charts<br/>• 9s Audio Call Player<br/>• Same-origin /api/ proxy"]
+        Backend["Backend (FastAPI :8001)<br/>• REST API (/api/v1)<br/>• Audio Snippet Streaming"]
+        Indexer["Master Indexer (--watch)<br/>• Detection Rollups"]
+    end
+
+    subgraph Storage ["Central Data & DB"]
+        CentralDB[(Central PostgreSQL<br/>cem_master DB)]
+        DataDir[/"Host data/<br/>• projects/<br/>• snippets/<br/>• detections.csv"/]
+        LogsDir[/"Host data/logs/cem-master-frontend/"/]
+        FileBrowser["FileBrowser Service<br/>(Download Links)"]
+        HostDataService["Host Data Service<br/>(Enforces outputs.yaml)"]
+    end
+
+    Browser -->|HTTP :8000| Frontend
+    Frontend -->|Proxy /api/*| Backend
+    Backend --> CentralDB
+    Backend -->|Stream 9s WAV| DataDir
+    Indexer --> CentralDB
+    Indexer --> DataDir
+    Frontend -.->|Write logs| LogsDir
+    DataDir --> FileBrowser
+    DataDir --> HostDataService
+```
+
+---
+
+## 9. Central PostgreSQL Database (§9)
+
+Database storage is centralized across the cluster. The master stack connects to PostgreSQL via `DATABASE_URL` in `cem-master-backend/.env`. All spot summaries, species metrics, and snippet URLs persist permanently across container recreations.
+
+---
+
+## 10. Output Retention Policy (`outputs.yaml`) (§10)
+
+Output trees under `data/` follow the retention rules defined in [`outputs.yaml`](outputs.yaml):
+- **`public`**: Public monitoring spots, species detection summaries, and 9-second bird audio snippet files.
+- **`private_persistent`**: Nginx web server access/error logs.
+- **`delete`** (`ttl_days: 7`): Temporary static asset build caches.
+
+---
+
+## Development & Operations
+
+The frontend is managed as part of the unified stack from `cem-master-backend`:
+
+```bash
+# Start the full stack (Frontend + Backend + Indexer + DB)
 cd ../cem-master-backend
 ./scripts/dev-up.sh -d
+
+# Restart frontend after style/script changes
+docker compose restart frontend
 ```
 
-Then open <http://localhost:8000>.
-
-**Why one owner.** This repo used to define a `backend` service as well, and the
-problems were concrete: both files published port 8001, so running both failed —
-or worse, left you talking to a backend you did not think you were talking to;
-the two definitions drifted; and the backend defined here had no database, so it
-failed its health check and the frontend, gated on `service_healthy`, never
-started at all. The fix was one owner per service. Moving the frontend service
-into `cem-master-backend` finishes that job: one compose file per stack.
-
-The two repos must be checked out **side by side**, because the compose file
-builds this one at `../cem-master-frontend`:
-
-```text
-your-workspace/
-├── cem-master-backend/     <- start here
-└── cem-master-frontend/    <- this repo
-```
-
-Set `MASTER_FRONTEND_CONTEXT` in `cem-master-backend/.env` if your layout
-differs.
-
-## How API calls reach the backend
-
-The browser only ever talks to its own origin:
-
-```text
-http://localhost:8000/api/v1/spots
-```
-
-nginx forwards `/api/*` across the Docker network:
-
-```text
-http://backend:8001/api/v1/spots
-```
-
-`backend` is a Docker DNS name on `cem_master_network`, resolvable only inside
-it. The browser never needs to know it exists, and there is no CORS to configure
-because everything is same-origin.
-
-`GET /backend-health` proxies the API's health check, which queries PostgreSQL —
-it returns 503 when the API is up but the database is not.
-
-**The page deliberately does not wait for the API.** There is no
-`depends_on: service_healthy` on this service. If the backend is down the page
-still loads and its calls return 502, because a visible error is easier to
-diagnose than a container that silently refuses to start.
-
-## Editing
-
-`index.html`, `js/`, `styles/` and `leaflet/` are bind-mounted read-only, so
-source edits need a restart, not a rebuild:
-
-```bash
-cd ../cem-master-backend && docker compose restart frontend
-```
-
-Changes to `nginx.conf` or `Dockerfile` do need `--build`.
-
-## What the page shows
-
-- Leaflet map with marker clustering, sized and coloured by detection count
-- Search by common or scientific name; only spots with that bird stay lit
-- Date-range filtering
-- Per-spot: species inventory, species richness, activity rank
-- Per-species-at-spot: hourly / daily / monthly activity, confidence, first and
-  last detection, migration class, seasonality
-- Acoustic indices, and solar/weather analysis fields where present
-- Analysis jobs, with input and output filenames and download links
-
-Analysis job **Output URL** links are FileBrowser share links. They appear only
-when `FILEBROWSER_PUBLIC_URL` is set on the indexer — blank means outputs are
-named but not linked, which is the safe default. See
-`cem-master-backend/INDEXING-PLAN.md` §4.3a.
-
-The **Analysis jobs** table lives on the spot panel, not the species panel.
-Runs are spot-level provenance — the indexer writes no species on them — so
-listing them under a selected bird implied a filter that never existed. Clear
-the species selection (or click a spot directly) to see them.
-
-There is deliberately **no Input URL column**. The compute app shares results
-only, never inputs — a link to a job's input folder would expose the raw audio,
-including recordings whose only detections are withheld species. Input
-*filenames* are still listed, and the filtered "Recordings with this bird" list
-is the public view of the inputs.
-
-## Layout
-
-```
-index.html              single page
-js/main.js              rendering, map, tables
-js/services/            DashboardService — the API client
-js/features/            map and panel features
-nginx.conf              static serving + /api/ proxy to backend:8001
-```
-
-## Related
-
-- [cem-master-backend](../cem-master-backend) — API, indexer, and the compose file that starts this
-- [cem-backend](../cem-backend) — compute API that produces the data
-- [cem-frontend](../cem-frontend) — the compute page
+Open <http://localhost:8000> in your browser.
