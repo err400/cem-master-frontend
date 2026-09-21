@@ -2,6 +2,7 @@ import { MapManager } from "./features/MapManager.js";
 import { DashboardService } from "./services/DashboardService.js";
 import { SpotsService } from "./services/SpotsService.js";
 import { debug } from "./Debug.js";
+import { initHelpGuide } from "./HelpGuide.js";
 
 const config = window.CEM_MASTER_CONFIG || {};
 const apiBaseUrl = config.API_BASE_URL || window.location.origin;
@@ -1223,6 +1224,9 @@ function bindDashboard() {
 async function bootstrap() {
   debug('app.start');
   configureExternalLinks();
+  // Before the network: the guide must work even if the API is down, since
+  // "why is the map empty" is exactly when someone reaches for help.
+  initHelpGuide();
   setStatus("Loading public monitoring spots…", "loading");
   try {
     spotsService = new SpotsService({ apiBaseUrl });

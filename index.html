@@ -41,10 +41,41 @@
             <p class="eyebrow">Continuous Ecological Monitoring</p>
           </span>
         </a>
-        <a id="compute-frontend-link" class="cem-button" href="http://127.0.0.1:8080/" rel="noopener">
-          Do Your Own CEM <span aria-hidden="true">↗</span>
-        </a>
+        <div class="header-actions">
+          <button
+            id="help-toggle"
+            class="help-toggle"
+            type="button"
+            aria-controls="help-guide"
+            aria-expanded="false"
+            title="Field guide (press ?)"
+          >
+            <span aria-hidden="true">?</span>
+            <span class="sr-only">Open the field guide</span>
+          </button>
+          <a id="compute-frontend-link" class="cem-button" href="http://127.0.0.1:8080/" rel="noopener">
+            Do Your Own CEM <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </header>
+
+      <!-- Field guide: the user manual, written as a naturalist's notebook.
+           Content lives in js/HelpGuide.js so the entries can reference live
+           element ids and the panel can be reused by the compute page. -->
+      <aside id="help-guide" class="help-guide" hidden aria-labelledby="help-guide-title">
+        <div class="help-guide-inner">
+          <header class="help-guide-header">
+            <p class="section-kicker">Field guide</p>
+            <h2 id="help-guide-title">How to read this map</h2>
+            <button id="help-close" class="help-close" type="button" aria-label="Close the field guide">×</button>
+          </header>
+          <ol id="help-entries" class="help-entries"></ol>
+          <footer class="help-guide-footer">
+            <span>Press <kbd>?</kbd> any time to reopen this. <kbd>Esc</kbd> closes it.</span>
+          </footer>
+        </div>
+      </aside>
+      <div id="help-backdrop" class="help-backdrop" hidden></div>
 
       <main class="workspace">
         <aside class="dashboard" aria-label="Biodiversity dashboard">
