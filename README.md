@@ -106,6 +106,19 @@ cem-master-frontend/
 
 ---
 
+## Debug Logging & DevTools Diagnostics
+
+Set `DEBUG=true` in `cem-master-backend/.env` and recreate the stack (`./scripts/dev-up.sh -d`) to enable verbose frontend diagnostics.
+
+- **Console Diagnostics**: Docker generates `/runtime-debug.js` on startup. Opening browser DevTools Console (with the *Verbose* level enabled) outputs request timing, API status codes, missing snippet alerts, and audio playback stalls.
+- **Client-Side Overrides**:
+  - Temporary (tab-only): `globalThis.DEBUG = true`
+  - Persistent (local storage): `localStorage.setItem('DEBUG', 'true')`
+  - Reset to environment: `delete globalThis.DEBUG; localStorage.removeItem('DEBUG')`
+- See [`DEBUGGING.md`](DEBUGGING.md) for detailed frontend tracing tips.
+
+---
+
 ## Output Retention (`outputs.yaml`)
 
 - **`data/projects/`** (`mode: public`): Public map assets, detection summaries, and 9s audio clips.
