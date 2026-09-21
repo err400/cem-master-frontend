@@ -1,0 +1,15 @@
+# outputs.yaml — read by the host data service
+application: cem-master-frontend
+outputs:
+  - path: data/projects/
+    mode: public
+    ttl_days: null
+    description: Public map assets, detection summaries, and 9-second bird call audio clips.
+  - path: data/logs/cem-master-frontend/
+    mode: private_persistent
+    ttl_days: null
+    description: Frontend web server access and error logs.
+  - path: data/scratch/
+    mode: delete
+    ttl_days: 7
+    description: Ephemeral build files and scratch assets; host data service deletes after 7 days.

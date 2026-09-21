@@ -116,6 +116,9 @@ Set `LOG_LEVEL=debug` (or `DEBUG=true`) in `cem-master-backend/.env` and recreat
 
 ## Output Retention (`outputs.yaml`)
 
-- **`data/projects/`** (`mode: public`): Public map assets, detection summaries, and 9s audio clips.
-- **`data/logs/cem-master-frontend/`** (`mode: private_persistent`): Nginx access and error logs.
-- **`data/scratch/`** (`mode: delete`, `ttl_days: 7`): Ephemeral build files deleted after 7 days.
+Output lifecycle policies under `data/` are declared in [`outputs.yaml`](outputs.yaml) and enforced by the cluster's **Host Data Service**:
+
+- **`data/projects/`** (`mode: public`, `ttl_days: null`): Public map assets, detection summaries, and 9-second bird call audio snippet clips.
+- **`data/logs/cem-master-frontend/`** (`mode: private_persistent`, `ttl_days: null`): Frontend web server access and error logs.
+- **`data/scratch/`** (`mode: delete`, `ttl_days: 7`): Ephemeral build files and scratch assets; deleted after 7 days.
+
