@@ -1,6 +1,7 @@
 import { MapManager } from "./features/MapManager.js";
 import { DashboardService } from "./services/DashboardService.js";
 import { SpotsService } from "./services/SpotsService.js";
+import { debug } from "./Debug.js";
 
 const config = window.CEM_MASTER_CONFIG || {};
 const apiBaseUrl = config.API_BASE_URL || window.location.origin;
@@ -268,12 +269,19 @@ function showDetailsHeading() {
 
 function createSnippetPlayer(snippet, { label = "Play Call (9s)", subtitle = "", compact = false } = {}) {
   if (!snippet || !snippet.url) return null;
+  debug('snippet.player_created', { confidence: snippet.confidence, duration: snippet.window?.duration });
 
   const container = document.createElement("div");
   container.className = compact ? "snippet-player snippet-player--compact" : "snippet-player";
 
   const audio = new Audio(apiUrl(snippet.url));
   audio.preload = "none";
+  for (const event of ['loadedmetadata', 'playing', 'pause', 'ended', 'stalled', 'error']) {
+    audio.addEventListener(event, () => debug('snippet.' + event, {
+      duration: audio.duration, position: audio.currentTime,
+      readyState: audio.readyState, errorCode: audio.error?.code,
+    }));
+  }
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -318,6 +326,7 @@ function createSnippetPlayer(snippet, { label = "Play Call (9s)", subtitle = "",
       activeAudio.pause();
     }
     activeAudio = audio;
+    debug('snippet.play_requested', { duration: snippet.window?.duration });
     btn.classList.add("is-loading");
     const iconSpan = btn.querySelector(".snippet-play-icon");
     const labelSpan = btn.querySelector(".snippet-play-label");
@@ -326,6 +335,7 @@ function createSnippetPlayer(snippet, { label = "Play Call (9s)", subtitle = "",
       await audio.play();
     } catch (err) {
       console.error("Audio snippet playback error:", err);
+      debug('snippet.play_rejected', { error: err.name, errorCode: audio.error?.code });
       btn.classList.remove("is-loading");
       if (iconSpan) iconSpan.textContent = "⚠️";
       if (labelSpan) labelSpan.textContent = "Error";
@@ -369,6 +379,7 @@ function createSnippetPlayer(snippet, { label = "Play Call (9s)", subtitle = "",
 }
 
 function renderSpecies(species) {
+  debug('species.render', { speciesId: species.id, hasSnippet: Boolean(species.snippet?.url) });
   elements.speciesPanel.hidden = false;
   elements.speciesCommonName.textContent = species.common_name;
   elements.speciesScientificName.textContent = species.scientific_name;
@@ -434,6 +445,7 @@ const ACOUSTIC_INDEX_LABELS = {
 
 async function renderSpotSummary(data, dates = {}) {
   const { spot, summary, top_species: topSpecies = [], bird_inventory: inventory = [] } = data;
+  debug('spot.render', { spotId: spot.id, birds: inventory.length, snippets: inventory.filter(item => item.snippet?.url).length });
   showDetailsHeading();
   elements.detailsTitle.textContent = spot.name;
   elements.detailsIntro.textContent = spot.description || `${spot.latitude}, ${spot.longitude}`;
@@ -959,6 +971,7 @@ async function renderRecordingsBrowser(container, spotId, speciesId = null, date
 
 async function renderSpotSpeciesSummary(data, dates = {}) {
   const { spot, species, observation } = data;
+  debug('spot_species.render', { spotId: spot.id, speciesId: species.id, hasSnippet: Boolean(observation.snippet?.url) });
   showDetailsHeading();
   elements.detailsTitle.textContent = `${species.common_name} at ${spot.name}`;
   elements.detailsIntro.textContent = `${spot.latitude.toFixed(5)}, ${spot.longitude.toFixed(5)}`;
@@ -1208,6 +1221,7 @@ function bindDashboard() {
 }
 
 async function bootstrap() {
+  debug('app.start');
   configureExternalLinks();
   setStatus("Loading public monitoring spots…", "loading");
   try {

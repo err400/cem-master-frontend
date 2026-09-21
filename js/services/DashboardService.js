@@ -1,3 +1,5 @@
+import { debug, debugFetch as fetch } from '../Debug.js';
+
 export class DashboardService {
   constructor({ apiBaseUrl }) {
     this.apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
@@ -12,7 +14,14 @@ export class DashboardService {
       const payload = await response.json().catch(() => ({}));
       throw new Error(payload.detail || `Dashboard request failed with ${response.status}`);
     }
-    return response.json();
+    const data = await response.json();
+    debug('dashboard.response', {
+      endpoint: path.split('?')[0],
+      items: data.items?.length,
+      inventory: data.bird_inventory?.length,
+      hasSnippet: Boolean(data.snippet?.url || data.species?.snippet?.url || data.observation?.snippet?.url),
+    });
+    return data;
   }
 
   async listSpecies(search = "", { migrationClass = "" } = {}) {
