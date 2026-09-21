@@ -1,29 +1,41 @@
-# Debug Logging
+# Logging & Diagnostics
 
-Set `DEBUG=true` in the sibling `cem-master-backend/.env`, then recreate that Compose
-stack with `up -d --build`. This repo's frontend is owned by that stack.
-A frontend-only `.env` is not loaded by the owning Compose stack.
+## Enabling Frontend Diagnostics
 
-Docker generates `/runtime-debug.js` at startup with a boolean flag. Refresh the
-page after changing it. `DEBUG=false` is the default; use `up -d` after changing
-the env value, because `restart` does not replace a container's environment.
-Static hosting defaults to false in the checked-in runtime config.
+Set `LOG_LEVEL=debug` (or `DEBUG=true`) in the sibling `cem-master-backend/.env`, then recreate the containers with `docker compose up -d`.
 
-Logs appear in browser DevTools Console (enable the Verbose level).
-For a temporary per-tab override, use `globalThis.DEBUG = true` or `false`.
-For a persistent override, use `localStorage.setItem('DEBUG', 'true')`.
-To follow the Docker env again:
+This frontend is started by `cem-master-backend`'s Compose configuration.
+Docker generates `/runtime-debug.js` at container startup with a boolean switch. Refresh the browser page after changing the environment setting. `LOG_LEVEL=info` (`DEBUG=false`) is the default.
 
+## Browser Console Diagnostics
+
+When enabled, diagnostics appear in the browser DevTools Console (ensure the **Verbose** level is enabled in DevTools):
+- **API Request Tracing**: Request ID, method, path, response status, and round-trip milliseconds (`http.start`, `http.finish`, `http.error`). Request diagnostics omit sensitive payloads and query strings.
+- **9-Second Audio Snippet Player**: Traces snippet audio availability, format validation, playback state transitions, stalls, and buffer errors (`snippet.loaded`, `snippet.play`, `snippet.pause`, `snippet.error`).
+- **Map & Spatial Events**: Spot clustering, spiderfy expansion, and species selection state.
+
+## Client-Side Overrides (DevTools)
+
+For a temporary per-tab override directly in DevTools console:
+```js
+globalThis.DEBUG = true;   // or false
+```
+
+For a persistent override across page refreshes:
+```js
+localStorage.setItem('DEBUG', 'true');
+```
+
+To clear client overrides and follow the server `LOG_LEVEL` environment variable again:
 ```js
 delete globalThis.DEBUG;
 localStorage.removeItem('DEBUG');
 localStorage.removeItem('debug');
 ```
 
-Precedence: per-tab DEBUG, localStorage DEBUG (or legacy debug), Docker env.
-Network diagnostics include request ID, path, method, status, timing, and error
-type. They exclude query strings, headers, payloads, credentials, and audio data.
-Workflow diagnostics cover catalogue responses, missing snippets in rendered species/spot details, and audio metadata, playback, stalls, and errors.
-Normal warnings/errors are unchanged. New diagnostics use the small `debug()`
-helper, with `debugFetch` wrapping only the app's existing request boundaries.
+### Precedence:
+1. Per-tab override (`globalThis.DEBUG`)
+2. Local storage override (`localStorage.DEBUG`)
+3. Server environment (`LOG_LEVEL=debug` or `DEBUG=true` via `/runtime-debug.js`)
+
 
