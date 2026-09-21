@@ -1,3 +1,5 @@
+import { debug, debugFetch as fetch } from '../Debug.js';
+
 export class SpotsService {
   constructor({ apiBaseUrl }) {
     this.apiBaseUrl = apiBaseUrl.replace(/\/+$/, "");
@@ -29,9 +31,11 @@ export class SpotsService {
 
     const data = await response.json();
     if (!this.isFeatureCollection(data)) {
+      debug('spots.invalid_response', { type: data?.type });
       throw new Error("Spot catalogue response was not a GeoJSON FeatureCollection");
     }
 
+    debug('spots.loaded', { count: data.features.length });
     return data;
   }
 
