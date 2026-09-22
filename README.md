@@ -2,13 +2,13 @@
 
 The **public interactive map & dashboard** for the Continuous Ecological Monitoring (CEM) network.
 
-A lightweight, plain HTML/JS/CSS client using Leaflet for spatial visualization, served via Nginx. It provides a read-only catalogue of monitoring spots, species search, 24-hour diurnal activity heatmaps, soundscape indices, raw audio recording playback, and an instant 9-second bird call audio snippet player.
+A lightweight, plain HTML/JS/CSS client using Leaflet for spatial visualization. It provides a read-only catalogue of monitoring spots, species search, 24-hour diurnal activity heatmaps, soundscape indices, raw audio recording playback, and an instant 9-second bird call audio snippet player.
 
 ---
 
 ## This repo does not start itself
 
-There is no `compose.yaml` in this repository. The entire master stack (PostgreSQL, FastAPI backend, indexer, and this frontend) is started and owned by **[cem-master-backend](../cem-master-backend)**:
+There is no `compose.yaml` in this repository. In alignment with cluster service standards (CoreStack Item #6), the entire master stack (PostgreSQL, FastAPI unified app, and background indexer) is started and owned by **[cem-master-backend](../cem-master-backend)**:
 
 ```bash
 cd ../cem-master-backend
@@ -17,46 +17,41 @@ cd ../cem-master-backend
 
 Then open <http://localhost:8000> in your browser.
 
-> **Why one owner**: Having one compose file in `cem-master-backend` prevents configuration drift and port conflicts. The two repositories must be checked out **side by side**:
-> ```text
-> your-workspace/
-> ├── cem-master-backend/     <- start here
-> └── cem-master-frontend/    <- this repo
-> ```
+> **Single Web Container**: The backend container mounts this directory to `/app/frontend:ro` and serves both the frontend HTML/JS/CSS on `/` and the REST API on `/api/v1/` from the same origin on port `8000`.
 
 ---
 
-## How API Calls Reach the Backend
+## Same-Origin Architecture
 
-The browser only ever talks to its own origin (`http://localhost:8000`):
+The browser talks directly to `http://localhost:8000`:
 
 ```text
-Browser (http://localhost:8000/api/v1/spots)
+Browser (http://localhost:8000)
    │
    ▼
-Nginx (:8000)
-   │  (internal Docker network proxy)
-   ▼
-Backend (http://backend:8001/api/v1/spots)
+Unified App (FastAPI :8000)
+   ├── Serves index.html, /styles, /js, /leaflet
+   ├── Handles REST API (/api/v1/spots, /api/v1/species, etc.)
+   ├── Serves dynamic /runtime-debug.js
+   └── Streams 9-second WAV audio clips
 ```
 
-- Nginx reverse-proxies all `/api/*` calls directly to `backend:8001` over the internal Docker network.
-- `GET /backend-health` proxies the API database health check.
-- Because everything is same-origin, no CORS configuration is needed by default.
-- If pointing the frontend to an external backend, `API_BASE_URL` in `js/config.js` or `.env` can be configured.
+- Because the UI and API are served from the same container and origin, no CORS proxying or separate web server container is required.
+- `GET /health` and `GET /backend-health` report service and database health.
+- If pointing the frontend to an external backend, `API_BASE_URL` in `js/config.js` can be overridden.
 
 ---
 
 ## Directory Mounts & Editing
 
-`index.html`, `js/`, `styles/`, and `leaflet/` are bind-mounted into the Nginx container read-only:
+`index.html`, `js/`, `styles/`, and `leaflet/` are mounted into the unified application container read-only:
 
 | Host Folder | Container Path | Purpose & Lifecycle |
 | :--- | :--- | :--- |
-| `index.html`, `js/`, `styles/`, `leaflet/` | `/usr/share/nginx/html:ro` | Frontend assets. Live-edited on host. |
+| `index.html`, `js/`, `styles/`, `leaflet/` | `/app/frontend:ro` | Frontend assets, served directly by FastAPI on `/`. |
 
-- **Live edits**: HTML, CSS, and JS edits take effect immediately upon browser refresh (or `docker compose restart frontend`).
-- Rebuild is only necessary if `Dockerfile` or `nginx.conf` is modified.
+- **Live edits**: HTML, CSS, and JS edits take effect immediately upon browser refresh (or `docker compose restart backend`).
+
 
 ---
 
@@ -106,9 +101,9 @@ cem-master-frontend/
 
 ---
 
-## Debug Logging & DevTools Diagnostics
+## Logging & DevTools Diagnostics
 
-Set `DEBUG=true` in `cem-master-backend/.env` and recreate the stack (`./scripts/dev-up.sh -d`) to enable verbose frontend diagnostics.
+Set `LOG_LEVEL=debug` (or `DEBUG=true`) in `cem-master-backend/.env` and recreate the stack (`./scripts/dev-up.sh -d`) to enable verbose frontend diagnostics.
 
 - **Console Diagnostics**: Docker generates `/runtime-debug.js` on startup. Opening browser DevTools Console (with the *Verbose* level enabled) outputs request timing, API status codes, missing snippet alerts, and audio playback stalls.
 - **Client-Side Overrides**:
@@ -121,6 +116,9 @@ Set `DEBUG=true` in `cem-master-backend/.env` and recreate the stack (`./scripts
 
 ## Output Retention (`outputs.yaml`)
 
-- **`data/projects/`** (`mode: public`): Public map assets, detection summaries, and 9s audio clips.
-- **`data/logs/cem-master-frontend/`** (`mode: private_persistent`): Nginx access and error logs.
-- **`data/scratch/`** (`mode: delete`, `ttl_days: 7`): Ephemeral build files deleted after 7 days.
+Output lifecycle policies under `data/` are declared in [`outputs.yaml`](outputs.yaml) and enforced by the cluster's **Host Data Service**:
+
+- **`data/projects/`** (`mode: public`, `ttl_days: null`): Public map assets, detection summaries, and 9-second bird call audio snippet clips.
+- **`data/logs/cem-master-frontend/`** (`mode: private_persistent`, `ttl_days: null`): Frontend web server access and error logs.
+- **`data/scratch/`** (`mode: delete`, `ttl_days: 7`): Ephemeral build files and scratch assets; deleted after 7 days.
+
