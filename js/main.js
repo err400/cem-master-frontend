@@ -3,6 +3,7 @@ import { DashboardService } from "./services/DashboardService.js";
 import { SpotsService } from "./services/SpotsService.js";
 import { debug } from "./Debug.js";
 import { initHelpGuide } from "./HelpGuide.js";
+import { initLanding, setLandingStats } from "./Landing.js";
 
 const config = window.CEM_MASTER_CONFIG || {};
 const apiBaseUrl = config.API_BASE_URL || window.location.origin;
@@ -54,6 +55,8 @@ function configureExternalLinks() {
   if (elements.computeFrontendLink) {
     elements.computeFrontendLink.href = computeFrontendUrl;
   }
+  const landingLink = document.querySelector("#landing-compute-link");
+  if (landingLink) landingLink.href = computeFrontendUrl;
 }
 
 function setStatus(message, type = "info") {
@@ -227,6 +230,7 @@ function updateNetworkStats(features, species = null) {
   elements.statSpots.textContent = features.length.toLocaleString();
   elements.statDetections.textContent = species ? detections.toLocaleString() : "Select a bird";
   elements.statSources.textContent = sources.toLocaleString();
+  if (!species) setLandingStats({ spots: features.length });
 }
 
 function renderRanking(container, features, valueKey, valueLabel, onSelect = null) {
@@ -1217,8 +1221,12 @@ function bindDashboard() {
     }, 180);
   });
 
-  // Populate useful suggestions before the first keystroke.
-  dashboardService.listSpecies().then(renderSuggestions).catch(() => {});
+  // Populate useful suggestions before the first keystroke. The same list is
+  // the network's species count for the front page.
+  dashboardService.listSpecies().then((items) => {
+    renderSuggestions(items);
+    if (Array.isArray(items)) setLandingStats({ species: items.length });
+  }).catch(() => {});
 }
 
 async function bootstrap() {
@@ -1227,6 +1235,7 @@ async function bootstrap() {
   // Before the network: the guide must work even if the API is down, since
   // "why is the map empty" is exactly when someone reaches for help.
   initHelpGuide();
+  initLanding();
   setStatus("Loading public monitoring spots…", "loading");
   try {
     spotsService = new SpotsService({ apiBaseUrl });

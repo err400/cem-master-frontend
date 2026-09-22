@@ -160,8 +160,15 @@ export function initHelpGuide() {
     }
   });
 
-  // A first-time visitor gets the guide once. After that it waits to be asked.
-  if (!seenBefore()) {
-    setTimeout(open, 600);
-  }
+  api.open = open;
+}
+
+const api = { open: null };
+
+// A first-time visitor gets the guide once, but not on top of the front page:
+// Landing.js calls this after "Get started", so the guide appears over the map
+// it describes. After that it waits to be asked.
+export function autoOpenHelpGuideOnce() {
+  if (!api.open || seenBefore()) return;
+  setTimeout(api.open, 600);
 }
