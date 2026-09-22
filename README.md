@@ -86,7 +86,7 @@ Unified App (FastAPI :8000)
 cem-master-frontend/
 ├── index.html              Single-page application layout
 ├── js/
-│   ├── config.js           Runtime API configuration (CEM_MASTER_CONFIG)
+│   ├── config.js           Fallback API configuration (CEM_MASTER_CONFIG)
 │   ├── main.js             Core UI rendering, event handling, and audio player
 │   ├── features/
 │   │   └── MapManager.js   Leaflet map setup, custom markers, and spiderfy clustering
@@ -96,7 +96,7 @@ cem-master-frontend/
 ├── styles/
 │   └── style.css           Vanilla CSS design system (earth tones, glassmorphism, responsive)
 ├── leaflet/                Local Leaflet map library and assets
-└── nginx.conf              Nginx web server configuration & /api/ proxy
+└── outputs.yaml            Data output retention policy for host data service
 ```
 
 ---
@@ -105,7 +105,7 @@ cem-master-frontend/
 
 Set `LOG_LEVEL=debug` (or `DEBUG=true`) in `cem-master-backend/.env` and recreate the stack (`./scripts/dev-up.sh -d`) to enable verbose frontend diagnostics.
 
-- **Console Diagnostics**: Docker generates `/runtime-debug.js` on startup. Opening browser DevTools Console (with the *Verbose* level enabled) outputs request timing, API status codes, missing snippet alerts, and audio playback stalls.
+- **Console Diagnostics**: FastAPI dynamically serves `/runtime-debug.js` and `/js/config.js` at runtime. Opening browser DevTools Console (with the *Verbose* level enabled) outputs request timing, API status codes, missing snippet alerts, and audio playback stalls.
 - **Client-Side Overrides**:
   - Temporary (tab-only): `globalThis.DEBUG = true`
   - Persistent (local storage): `localStorage.setItem('DEBUG', 'true')`
@@ -119,6 +119,6 @@ Set `LOG_LEVEL=debug` (or `DEBUG=true`) in `cem-master-backend/.env` and recreat
 Output lifecycle policies under `data/` are declared in [`outputs.yaml`](outputs.yaml) and enforced by the cluster's **Host Data Service**:
 
 - **`data/projects/`** (`mode: public`, `ttl_days: null`): Public map assets, detection summaries, and 9-second bird call audio snippet clips.
-- **`data/logs/cem-master-frontend/`** (`mode: private_persistent`, `ttl_days: null`): Frontend web server access and error logs.
 - **`data/scratch/`** (`mode: delete`, `ttl_days: 7`): Ephemeral build files and scratch assets; deleted after 7 days.
+
 
