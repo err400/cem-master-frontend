@@ -95,8 +95,7 @@ cem-master-frontend/
 │       └── SpotsService.js      REST client for GeoJSON spot features
 ├── styles/
 │   └── style.css           Vanilla CSS design system (earth tones, glassmorphism, responsive)
-├── leaflet/                Local Leaflet map library and assets
-└── outputs.yaml            Data output retention policy for host data service
+└── leaflet/                Local Leaflet map library and assets
 ```
 
 ---
@@ -114,11 +113,9 @@ Set `LOG_LEVEL=debug` (or `DEBUG=true`) in `cem-master-backend/.env` and recreat
 
 ---
 
-## Output Retention (`outputs.yaml`)
+## Output Retention Policy
 
-Output lifecycle policies under `data/` are declared in [`outputs.yaml`](outputs.yaml) and enforced by the cluster's **Host Data Service**:
+Because the frontend is a pure static asset client served by the unified backend container, compute outputs and log retention policies under `data/` are centrally defined and owned in **[`cem-master-backend/outputs.yaml`](../cem-master-backend/outputs.yaml)**.
 
-- **`data/projects/`** (`mode: public`, `ttl_days: null`): Public map assets, detection summaries, and 9-second bird call audio snippet clips.
-- **`data/scratch/`** (`mode: delete`, `ttl_days: 7`): Ephemeral build files and scratch assets; deleted after 7 days.
 
 
