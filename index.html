@@ -132,49 +132,32 @@
             </aside>
           </div>
 
-          <!-- Plate I: a stylised view of the network. Decorative, but the
-               numbers in the corner tags are live once the API answers. -->
+          <!-- Plate I: the network, drawn from the same /api/v1/spots call the
+               dashboard uses. Every dot is a real public spot; halo size is its
+               species count; the axis ticks are the real bounding box. Empty
+               until the API answers -- see renderLandingPlate() in Landing.js. -->
           <figure class="landing-plate" aria-hidden="true">
             <div class="plate-tag plate-tag--tl">PLATE I: PUBLIC SPOTS</div>
             <div class="plate-tag plate-tag--tr">EPSG: 4326</div>
-            <svg viewBox="0 0 440 380" class="plate-svg" xmlns="http://www.w3.org/2000/svg">
+            <svg id="landing-plate-svg" viewBox="0 0 440 380" class="plate-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <pattern id="plate-grid" width="40" height="40" patternUnits="userSpaceOnUse">
                   <path d="M40 0H0V40" fill="none" stroke="currentColor" stroke-opacity="0.12" />
                 </pattern>
               </defs>
               <rect width="440" height="380" fill="url(#plate-grid)" />
-              <!-- Detection halos: bigger = more active. -->
-              <g class="plate-halos" fill="var(--lichen)" fill-opacity="0.16">
-                <circle cx="120" cy="130" r="46" /><circle cx="300" cy="110" r="34" />
-                <circle cx="330" cy="240" r="58" /><circle cx="90" cy="290" r="28" />
-                <circle cx="210" cy="300" r="40" /><circle cx="230" cy="180" r="24" />
-              </g>
-              <!-- Listening rings: three spots "recording" right now. -->
-              <g class="plate-rings" fill="none" stroke="var(--forest)" stroke-width="1.2">
-                <circle class="ring" cx="330" cy="240" r="12" /><circle class="ring ring--2" cx="120" cy="130" r="12" />
-                <circle class="ring ring--3" cx="210" cy="300" r="12" />
-              </g>
-              <!-- Spots -->
-              <g class="plate-spots" stroke="var(--forest-deep)" stroke-width="1.4">
-                <circle cx="120" cy="130" r="7" fill="var(--forest)" /><circle cx="300" cy="110" r="6" fill="var(--forest)" />
-                <circle cx="330" cy="240" r="8" fill="var(--forest)" /><circle cx="90" cy="290" r="5.5" fill="var(--amber)" />
-                <circle cx="210" cy="300" r="6.5" fill="var(--forest)" /><circle cx="230" cy="180" r="5" fill="var(--amber)" />
-                <circle cx="380" cy="320" r="5" fill="var(--amber)" /><circle cx="60" cy="80" r="4.5" fill="var(--amber)" />
-              </g>
-              <!-- A route between spots -->
-              <path d="M60 80 C 90 110, 100 120, 120 130 S 200 170, 230 180 S 290 130, 300 110"
-                    fill="none" stroke="var(--amber)" stroke-width="1.2" stroke-dasharray="3 4" opacity="0.8" />
-              <!-- Axis ticks -->
-              <g class="plate-axis" font-family="var(--font-mono)" font-size="7.5" fill="currentColor" fill-opacity="0.55">
-                <text x="6" y="60">12.9710°N</text><text x="6" y="140">12.9706°N</text>
-                <text x="6" y="220">12.9702°N</text><text x="6" y="300">12.9698°N</text>
-                <text x="70" y="372">77.5940°E</text><text x="180" y="372">77.5944°E</text>
-                <text x="290" y="372">77.5948°E</text>
-              </g>
+              <g class="plate-halos" fill="var(--lichen)" fill-opacity="0.16"></g>
+              <g class="plate-rings" fill="none" stroke="var(--forest)" stroke-width="1.2"></g>
+              <g class="plate-spots" stroke="var(--forest-deep)" stroke-width="1.4"></g>
+              <g class="plate-labels" font-family="var(--font-mono)" font-size="7.5" fill="currentColor" fill-opacity="0.75"></g>
+              <g class="plate-axis" font-family="var(--font-mono)" font-size="7.5" fill="currentColor" fill-opacity="0.55"></g>
+              <text class="plate-empty" x="220" y="195" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="currentColor" fill-opacity="0.5">listening…</text>
             </svg>
             <div class="plate-tag plate-tag--bl">SPOTS INDEXED: <span id="landing-stat-spots" class="plate-live">…</span></div>
-            <div class="plate-tag plate-tag--br">SPECIES: <span id="landing-stat-species" class="plate-live">…</span></div>
+            <!-- Same figure and label as the dashboard's first stat, so the two
+                 never disagree. A distinct-species count needs the API to
+                 return one; the species list is capped at 30 and is not it. -->
+            <div class="plate-tag plate-tag--br">BIRD RECORDS: <span id="landing-stat-species" class="plate-live">…</span></div>
           </figure>
         </div>
       </section>

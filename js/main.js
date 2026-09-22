@@ -3,7 +3,7 @@ import { DashboardService } from "./services/DashboardService.js";
 import { SpotsService } from "./services/SpotsService.js";
 import { debug } from "./Debug.js";
 import { initHelpGuide } from "./HelpGuide.js";
-import { initLanding, setLandingStats } from "./Landing.js";
+import { initLanding, setLandingStats, renderLandingPlate } from "./Landing.js";
 
 const config = window.CEM_MASTER_CONFIG || {};
 const apiBaseUrl = config.API_BASE_URL || window.location.origin;
@@ -230,7 +230,10 @@ function updateNetworkStats(features, species = null) {
   elements.statSpots.textContent = features.length.toLocaleString();
   elements.statDetections.textContent = species ? detections.toLocaleString() : "Select a bird";
   elements.statSources.textContent = sources.toLocaleString();
-  if (!species) setLandingStats({ spots: features.length });
+  if (!species) {
+    setLandingStats({ spots: features.length, species: birdRecords });
+    renderLandingPlate(features);
+  }
 }
 
 function renderRanking(container, features, valueKey, valueLabel, onSelect = null) {
@@ -1221,12 +1224,9 @@ function bindDashboard() {
     }, 180);
   });
 
-  // Populate useful suggestions before the first keystroke. The same list is
-  // the network's species count for the front page.
-  dashboardService.listSpecies().then((items) => {
-    renderSuggestions(items);
-    if (Array.isArray(items)) setLandingStats({ species: items.length });
-  }).catch(() => {});
+  // Populate useful suggestions before the first keystroke. Capped at 30 by
+  // the service, so its length is NOT a species count -- do not reuse it as one.
+  dashboardService.listSpecies().then(renderSuggestions).catch(() => {});
 }
 
 async function bootstrap() {
