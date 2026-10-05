@@ -2,10 +2,11 @@
 
 ## Enabling Frontend Diagnostics
 
-Set `LOG_LEVEL=debug` (or `DEBUG=true`) in the sibling `cem-master-backend/.env`, then recreate the containers with `docker compose up -d`.
+Set `LOG_LEVEL=debug` (or `DEBUG=true`) in the sibling `cem-master-backend/.env`, then recreate the appropriate master stack as described in the
+[setup guide](https://github.com/err400/cem-master-backend/blob/HEAD/CEM_SETUP_GUIDE.md).
 
 This frontend is started by `cem-master-backend`'s Compose configuration.
-Docker generates `/runtime-debug.js` at container startup with a boolean switch. Refresh the browser page after changing the environment setting. `LOG_LEVEL=info` (`DEBUG=false`) is the default.
+FastAPI serves `/runtime-debug.js` dynamically with a boolean switch. Refresh the browser page after changing the environment setting. `LOG_LEVEL=info` (`DEBUG=false`) is the default.
 
 ## Browser Console Diagnostics
 

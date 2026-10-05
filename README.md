@@ -1,25 +1,26 @@
-# cem-master-frontend
+# CEM Master frontend
 
-The **public interactive map & dashboard** for the Continuous Ecological Monitoring (CEM) network.
+The public CEM map and biodiversity dashboard, built with HTML, JavaScript, CSS,
+and Leaflet. It displays monitoring spots, species search, detection summaries,
+activity charts, acoustic indices, raw recording playback, and available bird
+call snippets and analysis links.
 
-A lightweight, plain HTML/JS/CSS client using Leaflet for spatial visualization. It provides a read-only catalogue of monitoring spots, species search, 24-hour diurnal activity heatmaps, soundscape indices, raw audio recording playback, and an instant 9-second bird call audio snippet player.
+## Local setup links
 
----
+- [Local setup in the sibling checkout](../cem-master-backend/docs/local-setup.md)
+- [Local setup on GitHub](https://github.com/err400/cem-master-backend/blob/HEAD/docs/local-setup.md)
+- [Full setup/environment guide in the sibling checkout](../cem-master-backend/CEM_SETUP_GUIDE.md)
 
-## This repo does not start itself
+The local guide includes all four clone commands and the database/Alembic startup
+sequence. Keep the four repositories side by side so the local links work.
 
-There is no `compose.yaml` in this repository. In alignment with cluster service standards (CoreStack Item #6), the entire master stack (PostgreSQL, FastAPI unified app, and background indexer) is started and owned by **[cem-master-backend](../cem-master-backend)**:
+## Run the website
 
-```bash
-cd ../cem-master-backend
-./scripts/dev-up.sh -d
-```
-
-Then open <http://localhost:8000> in your browser.
-
-> **Single Web Container**: The backend container mounts this directory to `/app/frontend:ro` and serves both the frontend HTML/JS/CSS on `/` and the REST API on `/api/v1/` from the same origin on port `8000`.
-
----
+Follow the [complete setup guide](https://github.com/err400/cem-master-backend/blob/HEAD/CEM_SETUP_GUIDE.md)
+in `cem-master-backend`. The backend's Compose stack mounts this checkout at
+`/frontend` and serves both the website and API on **http://localhost:8000**.
+This repository has no standalone Compose stack. Its legacy `FRONTEND_PORT`
+example is not used by the unified master deployment.
 
 ## Same-Origin Architecture
 
@@ -33,14 +34,12 @@ Unified App (FastAPI :8000)
    ├── Serves index.html, /styles, /js, /leaflet
    ├── Handles REST API (/api/v1/spots, /api/v1/species, etc.)
    ├── Serves dynamic /runtime-debug.js
-   └── Streams 9-second WAV audio clips
+   └── Streams full recordings and 9-second WAV clips
 ```
 
 - Because the UI and API are served from the same container and origin, no CORS proxying or separate web server container is required.
 - `GET /health` and `GET /backend-health` report service and database health.
-- If pointing the frontend to an external backend, `API_BASE_URL` in `js/config.js` can be overridden.
-
----
+- If pointing the frontend to an external backend, `API_BASE_URL` is supplied by the backend runtime configuration.
 
 ## Directory Mounts & Editing
 
@@ -48,12 +47,9 @@ Unified App (FastAPI :8000)
 
 | Host Folder | Container Path | Purpose & Lifecycle |
 | :--- | :--- | :--- |
-| `index.html`, `js/`, `styles/`, `leaflet/` | `/app/frontend:ro` | Frontend assets, served directly by FastAPI on `/`. |
+| `index.html`, `js/`, `styles/`, `leaflet/` | `/frontend:ro` | Frontend assets, served directly by FastAPI on `/`. |
 
-- **Live edits**: HTML, CSS, and JS edits take effect immediately upon browser refresh (or `docker compose restart backend`).
-
-
----
+- **Live edits**: HTML, CSS, and JS edits take effect immediately upon browser refresh .
 
 ## What the Dashboard Shows
 
@@ -65,7 +61,7 @@ Unified App (FastAPI :8000)
    - Unveils spots where that bird was detected.
 3. **9-Second Audio Snippet Player**:
    - **Global Showcase**: Left sidebar plays the network-wide highest confidence 9s focal call clip for the selected species.
-   - **Spot Inventory Table**: Every bird row in the spot inventory has a `[ 9s ]` play button for auditioning calls recorded at that spot.
+   - **Spot Inventory Table**: Bird rows with an available snippet have a `[ 9s ]` play button for auditioning calls recorded at that spot.
    - **Spot Observation Banner**: Representative focal call clip in the spot species view.
 4. **Bioacoustic & Temporal Analytics**:
    - **Species Diurnal Activity**: 24-hour bar chart displaying calling activity across the day (00:00 to 23:00).
@@ -75,10 +71,8 @@ Unified App (FastAPI :8000)
    - **Seasonal & Solar Metrics**: SCI (Seasonal Concentration), PMR (Peak-to-Median Ratio), Kurtosis, sunrise correlation.
 5. **Raw Audio Recordings Browser**:
    - Paginated list of full audio recordings with visual sound wave progress and playback.
-6. **Analysis Jobs & Provocative Provenance**:
+6. **Analysis Jobs & Provenance**:
    - Lists completed analysis runs with downloadable results via FileBrowser share links (`FILEBROWSER_PUBLIC_URL`).
-
----
 
 ## Code Structure
 
@@ -98,24 +92,65 @@ cem-master-frontend/
 └── leaflet/                Local Leaflet map library and assets
 ```
 
----
+## Deployment configuration
+
+Website: https://www.cse.iitd.ernet.in/act4dws5/bio-master/
+
+Set these in the master backend's private `.env` for the current deployed proxy:
+
+```dotenv
+API_BASE_URL=https://www.cse.iitd.ernet.in/act4dws5/bio-master/api
+COMPUTE_FRONTEND_URL=https://www.cse.iitd.ernet.in/act4dws5/bio/
+BACKEND_CORS_ORIGINS=https://www.cse.iitd.ernet.in
+```
+
+FastAPI serves runtime browser configuration at `/js/config.js`, overriding the
+checked-in fallback. The proxy must expose that route under the website prefix.
+API JSON requests and audio URLs must preserve the configured API base; a leading
+`/api/v1/...` media path must not discard the deployment prefix.
+
+## Editing and tests
+
+`index.html` contains the layout, `js/main.js` renders the dashboard and players,
+`js/services/` calls the API, `js/features/MapManager.js` manages the map, and
+`styles/style.css` supplies styles. The bundled Leaflet assets are in `leaflet/`.
+
+With the current bind mount, asset changes appear after browser refresh. An
+image-based release must package the assets. No database migration is needed
+for frontend-only edits.
+
+With Node.js installed:
+
+```bash
+node --test tests/*.test.mjs
+```
+
+## Troubleshooting
+
+Use [DEBUGGING.md](DEBUGGING.md) for browser diagnostics. If recordings are listed
+but do not play, inspect the actual audio request in DevTools Network: confirm
+the deployment prefix and an audio response. `Audio file not found` means the
+backend could not locate the WAV in its data mount; metadata alone is not enough.
+Download links require both compute-created shares and master
+`FILEBROWSER_PUBLIC_URL`; blank configuration means output names without links.
+
+Compute owns original recordings and job-output retention. The master frontend
+does not implement its own output retention policy.
 
 ## Logging & DevTools Diagnostics
 
-Set `LOG_LEVEL=debug` (or `DEBUG=true`) in `cem-master-backend/.env` and recreate the stack (`./scripts/dev-up.sh -d`) to enable verbose frontend diagnostics.
+Set `LOG_LEVEL=debug` or `DEBUG=true` in the master backend's `.env`, recreate
+its configured stack, and refresh the browser. FastAPI serves runtime flags and
+browser configuration dynamically. In DevTools Console, enable Verbose output.
 
-- **Console Diagnostics**: FastAPI dynamically serves `/runtime-debug.js` and `/js/config.js` at runtime. Opening browser DevTools Console (with the *Verbose* level enabled) outputs request timing, API status codes, missing snippet alerts, and audio playback stalls.
-- **Client-Side Overrides**:
-  - Temporary (tab-only): `globalThis.DEBUG = true`
-  - Persistent (local storage): `localStorage.setItem('DEBUG', 'true')`
-  - Reset to environment: `delete globalThis.DEBUG; localStorage.removeItem('DEBUG')`
-- See [`DEBUGGING.md`](DEBUGGING.md) for detailed frontend tracing tips.
-
----
+Temporary override: `globalThis.DEBUG = true`. Persistent override:
+`localStorage.setItem('DEBUG', 'true')`. Reset with
+`delete globalThis.DEBUG; localStorage.removeItem('DEBUG')`.
+See [DEBUGGING.md](DEBUGGING.md) for request and audio diagnostics.
 
 ## Output Retention Policy
 
-Because the frontend is a pure static asset client served by the unified backend container, compute outputs and log retention policies under `data/` are centrally defined and owned in **[`cem-master-backend/outputs.yaml`](../cem-master-backend/outputs.yaml)**.
-
-
-
+The frontend is a static client; storage policies are owned by backend/compute.
+[Master outputs.yaml](../cem-master-backend/outputs.yaml) declares lifecycle
+policies for a separately configured cluster host data service. Local Compose
+does not enforce that file. Compute's retention worker manages its job outputs.
