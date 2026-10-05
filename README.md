@@ -1,4 +1,4 @@
-# CEM Master frontend
+# CEM Master — Map and Biodiversity Dashboard
 
 The public CEM map and biodiversity dashboard, built with HTML, JavaScript, CSS,
 and Leaflet. It displays monitoring spots, species search, detection summaries,
