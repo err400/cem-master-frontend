@@ -7,13 +7,13 @@ call snippets and analysis links.
 
 ## Local setup links
 
-- [Local setup guide](https://github.com/err400/cem-master-backend/blob/yuvika_branch/docs/local-setup.md)
-- [Full setup and environment guide](https://github.com/err400/cem-master-backend/blob/yuvika_branch/CEM_SETUP_GUIDE.md)
+- [Local setup guide](https://github.com/err400/cem-master-backend/blob/main/docs/local-setup.md)
+- [Full setup and environment guide](https://github.com/err400/cem-master-backend/blob/main/CEM_SETUP_GUIDE.md)
 
 
 ## Run the website
 
-Follow the [complete setup guide](https://github.com/err400/cem-master-backend/blob/yuvika_branch/CEM_SETUP_GUIDE.md)
+Follow the [complete setup guide](https://github.com/err400/cem-master-backend/blob/main/CEM_SETUP_GUIDE.md)
 in `cem-master-backend`. The backend's Compose stack mounts this checkout at
 `/frontend` and serves both the website and API on **http://localhost:8000**.
 This repository has no standalone Compose stack. Its legacy `FRONTEND_PORT`
@@ -124,7 +124,7 @@ node --test tests/*.test.mjs
 
 ## Troubleshooting
 
-Use [DEBUGGING.md](https://github.com/err400/cem-master-frontend/blob/yuvika_branch/DEBUGGING.md) for browser diagnostics. If recordings are listed
+Use [DEBUGGING.md](https://github.com/err400/cem-master-frontend/blob/main/DEBUGGING.md) for browser diagnostics. If recordings are listed
 but do not play, inspect the actual audio request in DevTools Network: confirm
 the deployment prefix and an audio response. `Audio file not found` means the
 backend could not locate the WAV in its data mount; metadata alone is not enough.
@@ -143,11 +143,11 @@ browser configuration dynamically. In DevTools Console, enable Verbose output.
 Temporary override: `globalThis.DEBUG = true`. Persistent override:
 `localStorage.setItem('DEBUG', 'true')`. Reset with
 `delete globalThis.DEBUG; localStorage.removeItem('DEBUG')`.
-See [DEBUGGING.md](https://github.com/err400/cem-master-frontend/blob/yuvika_branch/DEBUGGING.md) for request and audio diagnostics.
+See [DEBUGGING.md](https://github.com/err400/cem-master-frontend/blob/main/DEBUGGING.md) for request and audio diagnostics.
 
 ## Output Retention Policy
 
 The frontend is a static client; storage policies are owned by backend/compute.
-[Master outputs.yaml](https://github.com/err400/cem-master-backend/blob/yuvika_branch/outputs.yaml) declares lifecycle
+[Master outputs.yaml](https://github.com/err400/cem-master-backend/blob/main/outputs.yaml) declares lifecycle
 policies for a separately configured cluster host data service. Local Compose
 does not enforce that file. Compute's retention worker manages its job outputs.
