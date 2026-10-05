@@ -19,24 +19,85 @@ in `cem-master-backend`. The backend's Compose stack mounts this checkout at
 This repository has no standalone Compose stack. Its legacy `FRONTEND_PORT`
 example is not used by the unified master deployment.
 
-## Same-Origin Architecture
+## Architecture Diagram
 
-The browser talks directly to `http://localhost:8000`:
+The master serves the public website and catalogue; researchers trigger compute
+through the separate compute UI. Dotted arrows indicate optional integrations
+or required changes rather than installed services.
 
-```text
-Browser (http://localhost:8000)
-   │
-   ▼
-Unified App (FastAPI :8000)
-   ├── Serves index.html, /styles, /js, /leaflet
-   ├── Handles REST API (/api/v1/spots, /api/v1/species, etc.)
-   ├── Serves dynamic /runtime-debug.js
-   └── Streams full recordings and 9-second WAV clips
+```mermaid
+flowchart TB
+    Public["Public browser"]
+    Researcher["Researcher browser"]
+    ComputeUI["Compute frontend Docker<br/>separate Nginx container currently"]
+    Compute["Compute API Docker<br/>analysis dispatcher and publication"]
+    Dispatch{"AIRFLOW_BASE_URL set?<br/>current name; AIRFLOW_API_BASE required by checklist"}
+    Airflow["Optional Airflow-STACD Docker<br/>backend trigger and poll"]
+    Local["Local pipeline in compute API container"]
+    CodeCompute["Compute host code mounts<br/>pipeline to /app/pipeline<br/>server/app to /app/app"]
+    Models["Required compute models/ to /app/models<br/>not configured; master models N/A"]
+    Data["Shared host data/projects/<br/>mounted at /data in compute and master<br/>WAVs, caches, outputs, snippets, job metadata"]
+    ComputeLogs["Current compute logs/ to /logs<br/>task logs under data/projects<br/>required data/logs/cem-backend"]
+    GEE["Optional Google Earth Engine<br/>compute stratification"]
+    Drive["Optional Google OAuth and Drive<br/>compute frontend sync"]
+    App["Master backend Docker<br/>FastAPI :8000 serves frontend and API<br/>reads recordings/snippets from /data"]
+    Indexer["Master indexer Docker<br/>poll public projects and build rollups"]
+    MasterCode["Host cem-master-backend to /app<br/>read only"]
+    Frontend["Host cem-master-frontend to /frontend<br/>read only"]
+    DB[("Central PostgreSQL for cluster<br/>cem_master; DBA provisions role<br/>local overlay provides development DB")]
+    Logs["Host data/logs/cem-master-backend/<br/>writable nested mount<br/>LOG_LEVEL debug / info / error"]
+    FB["Optional FileBrowser Docker<br/>shared data to /srv<br/>output-share downloads"]
+    Sweep["Current compute retention worker<br/>public projects exempt from age cleanup"]
+    Policy["Master outputs.yaml<br/>projects: public, no TTL<br/>logs: private_persistent, no TTL<br/>scratch: delete after 7 days"]
+    ComputePolicy["Required compute outputs.yaml<br/>all output paths and retention modes<br/>not present"]
+    HostService["External cluster host data service<br/>policy enforcement must be provisioned"]
+
+    Researcher --> ComputeUI
+    ComputeUI -->|"upload and server analysis"| Compute
+    ComputeUI -.-> Drive
+    Compute --> Dispatch
+    Dispatch -->|"empty"| Local
+    Dispatch -->|"set: trigger and poll DAG"| Airflow
+    Airflow -.->|"worker callback to compute /api/v1/scripts"| Local
+    CodeCompute --> Compute
+    Models -.->|"required mount and loader configuration"| Local
+    Compute -->|"uploads; Make Public changes visibility"| Data
+    Local -->|"success: write compute results"| Data
+    Compute --> ComputeLogs
+    Compute -.-> GEE
+    Public -->|"website and catalogue API"| App
+    Public -.->|"contribute recordings link"| ComputeUI
+    MasterCode --> App
+    MasterCode --> Indexer
+    Frontend --> App
+    Data -->|"public project metadata and aggregates"| Indexer
+    Data -->|"read original audio and snippets"| App
+    Indexer -->|"write catalogue rollups"| DB
+    App -->|"query catalogue"| DB
+    App --> Logs
+    Indexer --> Logs
+    Compute -.->|"create shares when enabled"| FB
+    Public -.->|"download output-share links"| FB
+    FB --> Data
+    Sweep -->|"current compute cleanup"| Data
+    Policy -.-> HostService
+    ComputePolicy -.-> HostService
+    HostService -.->|"publish, persist or delete per policy"| Data
+    HostService -.->|"preserve logs"| Logs
 ```
 
-- Because the UI and API are served from the same container and origin, no CORS proxying or separate web server container is required.
-- `GET /health` and `GET /backend-health` report service and database health.
-- If pointing the frontend to an external backend, `API_BASE_URL` is supplied by the backend runtime configuration.
+Master does not run BirdNET and has no model weights. Compute's required model
+mount is shown as missing, rather than suggesting it is already provisioned.
+Airflow dispatch currently uses `AIRFLOW_BASE_URL`; worker callback routing must
+be configured separately. See the
+[compute architecture](https://github.com/err400/cem-backend/blob/master/README.md#architecture-diagram)
+for execution details and the separate browser-local watcher option.
+
+`outputs.yaml` declares master retention categories; Compose does not run the
+host data service or enforce that policy. Compute has an independent cleanup
+worker and still needs its own host-service policy. Cluster deployment uses
+central PostgreSQL; the bundled PostgreSQL overlay is for local development or
+the separately documented single-server installation, not cluster provisioning.
 
 ## Directory Mounts & Editing
 
