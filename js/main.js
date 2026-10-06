@@ -194,7 +194,12 @@ function optionalUrlCell(url, emptyLabel = "Not shared") {
 }
 
 function apiUrl(path) {
-  return new URL(path, `${apiBaseUrl.replace(/\/+$/, "")}/`).href;
+  // Backend media paths start at /api/... inside the application, so keep
+  // the deployment prefix just as DashboardService does for JSON requests.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("//")) {
+    return new URL(path, `${apiBaseUrl.replace(/\/+$/, "")}/`).href;
+  }
+  return new URL(path.replace(/^\/+/, ""), `${apiBaseUrl.replace(/\/+$/, "")}/`).href;
 }
 
 function renderAssetLinks(container, assets = []) {
