@@ -2023,9 +2023,9 @@ body {
   gap: clamp(28px, 5vw, 72px);
   align-items: center;
   max-width: 1180px;
-  min-height: 100%;
+  min-height: 0;
   margin: 0 auto;
-  padding: clamp(28px, 6vh, 72px) clamp(20px, 4vw, 48px);
+  padding: clamp(28px, 6vh, 72px) clamp(20px, 4vw, 48px) 28px;
 }
 
 .landing-kicker {
@@ -2202,3 +2202,14 @@ body {
   .plate-rings .ring { animation: none; opacity: 0.5; }
   .landing-cta, .landing-cta span { transition: none; }
 }
+
+/* Tutorial row is outside the hero grid so players cannot shift the map. */
+.landing-tutorials { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; max-width: 1180px; margin: 0 auto; padding: 0 clamp(20px, 4vw, 48px) 48px; scroll-margin-top: 24px; }
+.tutorial-card { min-width: 0; padding: 18px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--paper); }
+.tutorial-card h3 { margin: 0 0 6px; color: var(--ink); font-size: 1.1rem; }
+.tutorial-card p { margin: 0 0 14px; color: var(--ink-soft); font-size: 0.86rem; line-height: 1.5; }
+.tutorial-player { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; background: #111; }
+.tutorial-player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.tutorial-link { display: inline-block; margin-top: 12px; color: var(--forest); font-size: 0.82rem; font-weight: 600; }
+.tutorial-link:focus-visible { outline: 2px solid var(--forest); outline-offset: 4px; }
+@media (max-width: 680px) { .landing-tutorials { grid-template-columns: 1fr; } }

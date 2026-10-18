@@ -80,8 +80,7 @@
       <!-- Front page. Shown at / ; "Get started" moves to /#map and reveals the
            workspace underneath. The workspace is rendered the whole time so
            Leaflet initialises at full size -- this is an overlay, not a route.
-           Copy lives here rather than in JS because it is prose, and the video
-           slot is where the tutorial will go once the flow is reviewed. -->
+           Copy and the video walkthrough live here rather than in JS. -->
       <section id="landing" class="landing" aria-labelledby="landing-title">
         <div class="landing-inner">
           <div class="landing-copy">
@@ -119,17 +118,6 @@
               </a>
             </div>
 
-            <!-- Tutorial slot. Left visibly empty on purpose: the video is
-                 recorded after the flow is reviewed, and the page should not
-                 pretend otherwise. Replace the placeholder with an <iframe>
-                 or <video> and drop the .is-placeholder class. -->
-            <aside class="landing-video is-placeholder" aria-label="Video tutorial">
-              <span class="landing-video-mark" aria-hidden="true">▶</span>
-              <span>
-                <strong>Three-minute tour</strong>
-                <small>Video tutorial &mdash; coming once the flow is reviewed.</small>
-              </span>
-            </aside>
           </div>
 
           <!-- Plate I: the network, drawn from the same /api/v1/spots call the
@@ -160,6 +148,28 @@
             <div class="plate-tag plate-tag--br">BIRD RECORDS: <span id="landing-stat-species" class="plate-live">…</span></div>
           </figure>
         </div>
+        <section id="landing-tutorials" class="landing-tutorials" aria-label="CEM video walkthroughs">
+          <article class="tutorial-card">
+            <h3>CEM Master</h3>
+            <p>Watch this walkthrough to explore the public monitoring map.</p>
+            <div class="tutorial-player">
+              <iframe src="https://www.youtube-nocookie.com/embed/W1ebMReGzmQ" title="CEM Master video walkthrough"
+                loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+            <a class="tutorial-link" href="https://www.youtube.com/watch?v=W1ebMReGzmQ" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a>
+          </article>
+          <article class="tutorial-card">
+            <h3>CEM Compute</h3>
+            <p>Watch this walkthrough to get started with recordings and analysis.</p>
+            <div class="tutorial-player">
+              <iframe src="https://www.youtube-nocookie.com/embed/VIFJE174oDU" title="CEM Compute video walkthrough"
+                loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+            </div>
+            <a class="tutorial-link" href="https://www.youtube.com/watch?v=VIFJE174oDU" target="_blank" rel="noopener noreferrer">Watch on YouTube ↗</a>
+          </article>
+        </section>
       </section>
 
       <main class="workspace">
