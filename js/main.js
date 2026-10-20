@@ -4,6 +4,7 @@ import { SpotsService } from "./services/SpotsService.js";
 import { debug } from "./Debug.js";
 import { initHelpGuide } from "./HelpGuide.js";
 import { initLanding, setLandingStats, renderLandingPlate } from "./Landing.js";
+import { createEbirdLink } from "./services/ebird.js";
 
 const config = window.CEM_MASTER_CONFIG || {};
 const apiBaseUrl = config.API_BASE_URL || window.location.origin;
@@ -493,6 +494,15 @@ function renderSpecies(species) {
   elements.speciesPanel.hidden = false;
   elements.speciesCommonName.textContent = species.common_name;
   elements.speciesScientificName.textContent = species.scientific_name;
+
+  const oldEbird = elements.speciesPanel.querySelector(".species-panel-ebird-link");
+  if (oldEbird) oldEbird.remove();
+  const ebirdLink = createEbirdLink(species, {
+    label: "Explore on eBird",
+    className: "species-panel-ebird-link",
+  });
+  elements.speciesScientificName.after(ebirdLink);
+
   elements.speciesMetrics.replaceChildren();
 
   if (elements.speciesSnippetWrap) {
@@ -594,11 +604,15 @@ async function renderSpotSummary(data, dates = {}) {
     list.className = "species-list";
     topSpecies.forEach((species) => {
       const item = document.createElement("li");
+      const nameWrap = document.createElement("span");
+      nameWrap.className = "species-list-name-wrap";
       const name = document.createElement("span");
-      const count = document.createElement("strong");
       name.textContent = species.common_name;
+      const ebird = createEbirdLink(species, { label: "eBird", compact: true });
+      nameWrap.append(name, ebird);
+      const count = document.createElement("strong");
       count.textContent = species.detection_count.toLocaleString();
-      item.append(name, count);
+      item.append(nameWrap, count);
       list.append(item);
     });
     elements.detailsContent.append(list);
@@ -609,7 +623,20 @@ async function renderSpotSummary(data, dates = {}) {
     const hasClassification = inventory.some((item) => item.migration_class);
     const hasSnippets = inventory.some((item) => item.snippet && item.snippet.url);
     const columns = [
-      { key: "common_name", label: "Bird" },
+      {
+        key: "common_name",
+        label: "Bird",
+        render: (commonName, row) => {
+          const wrap = document.createElement("div");
+          wrap.className = "inventory-bird-cell";
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "inventory-bird-name";
+          nameSpan.textContent = commonName;
+          const ebird = createEbirdLink(row, { label: "eBird", compact: true });
+          wrap.append(nameSpan, ebird);
+          return wrap;
+        },
+      },
       { key: "detection_count", label: "Detections" },
       { key: "active_days", label: "Active days" },
     ];
@@ -1106,6 +1133,14 @@ async function renderSpotSpeciesSummary(data, dates = {}) {
   elements.detailsTitle.textContent = `${species.common_name} at ${spot.name}`;
   elements.detailsIntro.textContent = `${spot.latitude.toFixed(5)}, ${spot.longitude.toFixed(5)}`;
   elements.detailsContent.replaceChildren();
+
+  const ebirdBanner = document.createElement("div");
+  ebirdBanner.className = "spot-species-ebird-banner";
+  const ebirdIntro = document.createElement("span");
+  ebirdIntro.innerHTML = `Avian taxonomy & status for <strong>${escapeHtml(species.common_name)}</strong> (<em>${escapeHtml(species.scientific_name || "")}</em>):`;
+  const ebirdBtn = createEbirdLink(species, { label: "Explore on eBird" });
+  ebirdBanner.append(ebirdIntro, ebirdBtn);
+  elements.detailsContent.append(ebirdBanner);
 
   elements.detailsContent.append(createMetricGrid({
     detections: observation.detection_count,

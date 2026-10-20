@@ -2371,3 +2371,125 @@ body {
 .tutorial-link { display: inline-block; margin-top: 12px; color: var(--forest); font-size: 0.82rem; font-weight: 600; }
 .tutorial-link:focus-visible { outline: 2px solid var(--forest); outline-offset: 4px; }
 @media (max-width: 680px) { .landing-tutorials { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   eBird Integration & Profile Links
+   ========================================================================== */
+
+.inventory-bird-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.inventory-bird-name {
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.species-list-name-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ebird-link {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--forest) !important;
+  background: rgba(47, 93, 59, 0.08);
+  border: 1px solid rgba(47, 93, 59, 0.24);
+  border-radius: var(--radius-sm);
+  text-decoration: none !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: none !important;
+  line-height: 1.2;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform 0.12s ease, box-shadow var(--transition-fast);
+}
+
+.ebird-link:hover {
+  background: var(--forest);
+  color: var(--on-accent) !important;
+  border-color: var(--forest-deep);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(47, 93, 59, 0.22);
+}
+
+.ebird-link:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 2px;
+}
+
+.ebird-link .ebird-arrow {
+  font-size: 0.82em;
+  transition: transform 0.14s ease;
+  display: inline-block;
+}
+
+.ebird-link:hover .ebird-arrow {
+  transform: translate(1px, -1px);
+}
+
+.ebird-link--compact {
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.species-panel-ebird-link {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(47, 93, 59, 0.1);
+  border: 1px solid rgba(47, 93, 59, 0.3);
+  border-radius: var(--radius-pill);
+  color: var(--forest) !important;
+  text-decoration: none !important;
+}
+
+.species-panel-ebird-link:hover {
+  background: var(--forest);
+  color: var(--on-accent) !important;
+  border-color: var(--forest-deep);
+}
+
+.spot-species-ebird-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: rgba(47, 93, 59, 0.06);
+  border: 1px solid rgba(47, 93, 59, 0.18);
+  border-radius: var(--radius-md);
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+}
+
+.spot-species-ebird-banner strong {
+  color: var(--ink);
+}
+
+.spot-species-ebird-banner em {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
