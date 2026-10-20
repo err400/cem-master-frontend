@@ -121,7 +121,7 @@ branches, model-mount gap and optional Drive/GEE integrations are described in
    - **Spot Observation Banner**: Representative focal call clip in the spot species view.
 4. **Bioacoustic & Temporal Analytics**:
    - **Species Diurnal Activity**: 24-hour bar chart displaying calling activity across the day (00:00 to 23:00).
-   - **24-Hour Species Heatmap Matrix**: Normalized hourly activity for the top 20 most active birds at a spot.
+   - **24-Hour Species Heatmap Matrix**: Normalized hourly activity heatmap for all detected species at a spot in a scrollable matrix.
    - **Occurrence Time Series**: Daily detection timeline graph.
    - **Soundscape Indices**: ACI (Acoustic Complexity), ADI (Diversity), AEI (Evenness), NDSI, Bioacoustic Index.
    - **Seasonal & Solar Metrics**: SCI (Seasonal Concentration), PMR (Peak-to-Median Ratio), Kurtosis, sunrise correlation.

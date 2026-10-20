@@ -116,11 +116,22 @@ function selectedDates() {
   return { startDate, endDate };
 }
 
-function createDataTable(columns, rows) {
+function createDataTable(columns, rows, options = {}) {
+  const container = document.createElement("div");
+  container.className = "data-table-container";
+
   const wrapper = document.createElement("div");
   wrapper.className = "data-table-wrap";
+  if (options.scrollable !== false) {
+    wrapper.classList.add("is-scrollable");
+    if (options.maxHeight) {
+      wrapper.style.maxHeight = options.maxHeight;
+    }
+  }
+
   const table = document.createElement("table");
   table.className = "data-table";
+
   const head = document.createElement("thead");
   const headRow = document.createElement("tr");
   columns.forEach(({ label }) => {
@@ -129,22 +140,108 @@ function createDataTable(columns, rows) {
     headRow.append(th);
   });
   head.append(headRow);
+  table.append(head);
+
   const body = document.createElement("tbody");
-  rows.forEach((row) => {
-    const tr = document.createElement("tr");
-    columns.forEach(({ key, render }) => {
-      const td = document.createElement("td");
-      const value = row[key];
-      const output = render ? render(value, row) : formatValue(value);
-      if (output instanceof Node) td.append(output);
-      else td.textContent = output;
-      tr.append(td);
-    });
-    body.append(tr);
-  });
-  table.append(head, body);
+  table.append(body);
   wrapper.append(table);
-  return wrapper;
+  container.append(wrapper);
+
+  const pageSize = options.pageSize || 20;
+  const isPaginated = options.paginate !== false && pageSize > 0 && rows.length > pageSize;
+  let currentPage = 1;
+
+  function renderRows() {
+    body.replaceChildren();
+
+    const displayRows = isPaginated
+      ? rows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+      : rows;
+
+    displayRows.forEach((row) => {
+      const tr = document.createElement("tr");
+      columns.forEach(({ key, render }) => {
+        const td = document.createElement("td");
+        const value = row[key];
+        const output = render ? render(value, row) : formatValue(value);
+        if (output instanceof Node) td.append(output);
+        else td.textContent = output;
+        tr.append(td);
+      });
+      body.append(tr);
+    });
+  }
+
+  if (!isPaginated) {
+    renderRows();
+    return container;
+  }
+
+  const pager = document.createElement("div");
+  pager.className = "data-table-pager";
+
+  const info = document.createElement("div");
+  info.className = "data-table-pager-info";
+
+  const buttonsWrap = document.createElement("div");
+  buttonsWrap.className = "data-table-pager-buttons";
+
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.textContent = "Previous";
+
+  const pageLabel = document.createElement("span");
+  pageLabel.className = "data-table-page-label";
+
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.textContent = "Next";
+
+  buttonsWrap.append(prevBtn, pageLabel, nextBtn);
+  pager.append(info, buttonsWrap);
+  container.append(pager);
+
+  function updatePager() {
+    const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+    const startIdx = (currentPage - 1) * pageSize + 1;
+    const endIdx = Math.min(currentPage * pageSize, rows.length);
+    const label = options.itemLabel || "items";
+
+    info.textContent = `Showing ${startIdx}–${endIdx} of ${rows.length.toLocaleString()} ${label}`;
+    pageLabel.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+  }
+
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+      if (activeAudio && !activeAudio.paused) {
+        activeAudio.pause();
+      }
+      currentPage--;
+      renderRows();
+      updatePager();
+      wrapper.scrollTop = 0;
+    }
+  });
+
+  nextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(rows.length / pageSize);
+    if (currentPage < totalPages) {
+      if (activeAudio && !activeAudio.paused) {
+        activeAudio.pause();
+      }
+      currentPage++;
+      renderRows();
+      updatePager();
+      wrapper.scrollTop = 0;
+    }
+  });
+
+  renderRows();
+  updatePager();
+  return container;
 }
 
 // Only these schemes may ever reach an href. The URLs here are built by the
@@ -477,7 +574,7 @@ async function renderSpotSummary(data, dates = {}) {
   }
 
   const hasHourly = summary.hourly_counts && summary.hourly_counts.some((count) => count > 0);
-  const heatmapCard = renderSpeciesHeatmapCard(inventory, 20);
+  const heatmapCard = renderSpeciesHeatmapCard(inventory);
 
   if (hasHourly || heatmapCard) {
     const grid = document.createElement("div");
@@ -536,7 +633,14 @@ async function renderSpotSummary(data, dates = {}) {
         },
       });
     }
-    elements.detailsContent.append(createDataTable(columns, inventory));
+    elements.detailsContent.append(
+      createDataTable(columns, inventory, {
+        pageSize: 20,
+        itemLabel: "birds",
+        scrollable: true,
+        maxHeight: "540px",
+      })
+    );
   }
 
   renderAssetLinks(elements.detailsContent, summary.analysis_assets);
@@ -558,22 +662,31 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function renderSpeciesHeatmapCard(inventory = [], limit = 20) {
-  const birds = (Array.isArray(inventory) ? inventory : [])
-    .filter((bird) => Array.isArray(bird.hourly_counts) && bird.hourly_counts.some((c) => c > 0))
-    .slice(0, limit);
+function renderSpeciesHeatmapCard(inventory = [], limit = null) {
+  const birds = (Array.isArray(inventory) ? inventory : []).filter((bird) => {
+    if (Array.isArray(bird.hourly_counts) && bird.hourly_counts.some((c) => Number(c) > 0)) {
+      return true;
+    }
+    return Number(bird.detection_count || 0) > 0;
+  });
 
-  if (!birds.length) return null;
+  const displayedBirds = (limit && limit > 0) ? birds.slice(0, limit) : birds;
+
+  if (!displayedBirds.length) return null;
 
   const card = document.createElement("div");
   card.className = "analysis-chart-card heatmap-card";
 
   const title = document.createElement("h4");
-  title.textContent = `24-hour species activity (Top ${birds.length})`;
+  title.textContent = (limit && limit < birds.length)
+    ? `24-hour species activity (Top ${displayedBirds.length})`
+    : `24-hour species activity (${displayedBirds.length} species)`;
 
   const sub = document.createElement("p");
   sub.className = "chart-subtitle";
-  sub.textContent = "Hourly distribution for most active species";
+  sub.textContent = (limit && limit < birds.length)
+    ? "Hourly distribution for most active species"
+    : "Hourly distribution across all detected species";
 
   const cardBody = document.createElement("div");
   cardBody.className = "heatmap-card-body";
@@ -585,7 +698,7 @@ function renderSpeciesHeatmapCard(inventory = [], limit = 20) {
   table.className = "species-heatmap-table";
 
   const tbody = document.createElement("tbody");
-  birds.forEach((bird) => {
+  displayedBirds.forEach((bird) => {
     const row = document.createElement("tr");
 
     const nameTd = document.createElement("td");
@@ -601,9 +714,13 @@ function renderSpeciesHeatmapCard(inventory = [], limit = 20) {
     nameTd.append(nameBtn);
     row.append(nameTd);
 
-    const maxBirdHour = Math.max(...bird.hourly_counts, 1);
+    const counts = Array.isArray(bird.hourly_counts) && bird.hourly_counts.length === 24
+      ? bird.hourly_counts
+      : Array.from({ length: 24 }, (_, i) => Number(bird.hourly_counts?.[i] || 0));
+
+    const maxBirdHour = Math.max(...counts, 1);
     for (let h = 0; h < 24; h++) {
-      const count = Number(bird.hourly_counts[h] || 0);
+      const count = Number(counts[h] || 0);
       const td = document.createElement("td");
       td.className = "heatmap-cell";
       const ratio = count / maxBirdHour;
@@ -1071,7 +1188,7 @@ function appendJobsTable(container, jobs = []) {
     // reason, so the column could only ever read "Not shared".
     { key: "output_file", label: "Output file", render: (value, row) => value || fileNameFromUrl(row.output_url, "Output file") },
     { key: "output_url", label: "Output URL", render: (url) => optionalUrlCell(url) },
-  ], jobs));
+  ], jobs, { paginate: false, scrollable: false }));
 }
 
 async function handleSpotSelected(feature) {

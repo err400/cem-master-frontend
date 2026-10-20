@@ -605,16 +605,43 @@ h1 {
   display: flex;
   gap: 16px;
   align-items: flex-start;
+  position: relative;
 }
 
 .species-heatmap-table-wrap {
   flex: 1;
+  max-height: 440px;
+  overflow-y: auto;
   overflow-x: auto;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(47, 93, 59, 0.3) transparent;
+  padding-right: 4px;
+}
+
+.species-heatmap-table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.species-heatmap-table-wrap::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+}
+
+.species-heatmap-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(47, 93, 59, 0.25);
+  border-radius: 4px;
+}
+
+.species-heatmap-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(47, 93, 59, 0.5);
 }
 
 .species-heatmap-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.76rem;
 }
 
@@ -644,6 +671,10 @@ h1 {
 }
 
 .species-name-td {
+  position: sticky;
+  left: 0;
+  background: var(--bg-surface);
+  z-index: 2;
   text-align: left !important;
   white-space: nowrap;
   overflow: hidden;
@@ -696,6 +727,27 @@ h1 {
   position: relative;
 }
 
+.species-heatmap-table tfoot {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.species-heatmap-table tfoot th {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-light, rgba(0, 0, 0, 0.08));
+}
+
+.species-heatmap-table tfoot th:first-child {
+  position: sticky;
+  left: 0;
+  bottom: 0;
+  z-index: 12;
+  background: var(--bg-surface);
+}
+
 .hour-axis-label {
   font-size: 0.66rem;
   font-family: var(--font-mono);
@@ -717,6 +769,9 @@ h1 {
   color: var(--ink-soft);
   font-weight: 600;
   white-space: nowrap;
+  position: sticky;
+  top: 10px;
+  align-self: flex-start;
 }
 
 .vertical-gradient-bar {
@@ -1304,27 +1359,130 @@ body {
   border: 1px solid rgba(36, 88, 58, 0.07);
 }
 
+.data-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 9px;
+}
+
 .data-table-wrap {
   border: 1px solid rgba(36, 88, 58, 0.11);
   border-radius: 11px;
+  overflow: auto;
+  position: relative;
+}
+
+.data-table-wrap.is-scrollable {
+  max-height: 540px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(47, 93, 59, 0.25) transparent;
+}
+
+.data-table-wrap.is-scrollable::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.data-table-wrap.is-scrollable::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+}
+
+.data-table-wrap.is-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(47, 93, 59, 0.25);
+  border-radius: 4px;
+}
+
+.data-table-wrap.is-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(47, 93, 59, 0.5);
 }
 
 .data-table {
   background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
 }
 
-.data-table thead {
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: #eef4ea;
+  box-shadow: 0 1px 0 rgba(36, 88, 58, 0.15);
 }
 
 .data-table th,
 .data-table td {
   padding: 11px 12px;
-  border-bottom-color: rgba(36, 88, 58, 0.1);
+  border-bottom: 1px solid rgba(36, 88, 58, 0.1);
+  vertical-align: middle;
 }
 
 .data-table tbody tr:hover {
   background: #f8faf6;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 8px;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.data-table-pager-info {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.data-table-pager-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-table-pager-buttons button {
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid rgba(36, 88, 58, 0.2);
+  border-radius: 6px;
+  color: var(--forest-deep);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  font-weight: 700;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.data-table-pager-buttons button:hover:not(:disabled) {
+  background: #eef4ea;
+  border-color: var(--forest-deep);
+}
+
+.data-table-pager-buttons button:disabled {
+  cursor: default;
+  opacity: 0.4;
+  background: #fbfbfb;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.data-table-page-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 70px;
+  text-align: center;
 }
 
 .data-table a {
